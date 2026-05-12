@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 
 type Props = {
   value: string;
-  onChange: (value: string) => void;
+  onChange: Dispatch<SetStateAction<string>>;
   placeholder?: string;
   lang?: string;
   disabled?: boolean;
@@ -23,10 +24,11 @@ export function VoiceTextarea({
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
-  const valueRef = useRef(value);
+  // Tracks which result indices we've already committed as final, so Android Chrome's
+  // habit of resending all final results in each onresult event doesn't cause duplicates.
+  const emittedFinalsRef = useRef<Set<number>>(new Set());
 
   onChangeRef.current = onChange;
-  valueRef.current = value;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -42,18 +44,31 @@ export function VoiceTextarea({
     recognition.continuous = true;
     recognition.interimResults = true;
 
+    recognition.onstart = () => {
+      emittedFinalsRef.current = new Set();
+    };
+
     recognition.onresult = (event: any) => {
       let interimText = '';
-      let finalText = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      const newFinalChunks: string[] = [];
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal) finalText += result[0].transcript;
-        else interimText += result[0].transcript;
+        if (result.isFinal) {
+          if (!emittedFinalsRef.current.has(i)) {
+            emittedFinalsRef.current.add(i);
+            const chunk = String(result[0].transcript || '').trim();
+            if (chunk) newFinalChunks.push(chunk);
+          }
+        } else {
+          interimText += result[0].transcript;
+        }
       }
-      if (finalText.trim()) {
-        const prev = valueRef.current;
-        const sep = prev && !/[\s।!?.,]$/.test(prev) ? ' ' : '';
-        onChangeRef.current((prev || '') + sep + finalText.trim());
+      if (newFinalChunks.length > 0) {
+        const newFinalText = newFinalChunks.join(' ');
+        onChangeRef.current((prev) => {
+          const sep = prev && !/[\s।!?.,]$/.test(prev) ? ' ' : '';
+          return (prev || '') + sep + newFinalText;
+        });
       }
       setInterim(interimText);
     };
@@ -66,6 +81,8 @@ export function VoiceTextarea({
         setError('Mic permission denied. Browser settings mein allow karo.');
       } else if (code === 'network') {
         setError('Network error — internet check karo.');
+      } else if (code === 'aborted') {
+        // user stopped — not an error
       } else {
         setError(`Mic error: ${code}`);
       }
@@ -88,6 +105,7 @@ export function VoiceTextarea({
   const start = useCallback(() => {
     if (!recognitionRef.current) return;
     setError(null);
+    emittedFinalsRef.current = new Set();
     try {
       recognitionRef.current.start();
       setListening(true);
