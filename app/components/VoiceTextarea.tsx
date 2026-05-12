@@ -24,9 +24,12 @@ export function VoiceTextarea({
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
-  // Tracks which result indices we've already committed as final, so Android Chrome's
-  // habit of resending all final results in each onresult event doesn't cause duplicates.
+  // Android Chrome ignores continuous=true and emits cumulative finals.
+  // Using continuous=false + manual auto-restart on onend gives a
+  // feels-continuous UX while avoiding the cumulative-final duplication bug.
+  const shouldKeepListeningRef = useRef(false);
   const emittedFinalsRef = useRef<Set<number>>(new Set());
+  const lastFinalTextRef = useRef('');
 
   onChangeRef.current = onChange;
 
@@ -41,11 +44,12 @@ export function VoiceTextarea({
 
     const recognition = new SR();
     recognition.lang = lang;
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
 
     recognition.onstart = () => {
       emittedFinalsRef.current = new Set();
+      lastFinalTextRef.current = '';
     };
 
     recognition.onresult = (event: any) => {
@@ -56,8 +60,17 @@ export function VoiceTextarea({
         if (result.isFinal) {
           if (!emittedFinalsRef.current.has(i)) {
             emittedFinalsRef.current.add(i);
-            const chunk = String(result[0].transcript || '').trim();
-            if (chunk) newFinalChunks.push(chunk);
+            let chunk = String(result[0].transcript || '').trim();
+            // If this final extends the previous final (cumulative on Android),
+            // emit only the new tail.
+            const prev = lastFinalTextRef.current;
+            if (prev && chunk.startsWith(prev)) {
+              chunk = chunk.slice(prev.length).trim();
+            }
+            if (chunk) {
+              newFinalChunks.push(chunk);
+              lastFinalTextRef.current = String(result[0].transcript || '').trim();
+            }
           }
         } else {
           interimText += result[0].transcript;
@@ -75,27 +88,56 @@ export function VoiceTextarea({
 
     recognition.onerror = (e: any) => {
       const code = e?.error || 'unknown';
-      if (code === 'no-speech') {
-        setError('Kuch sunai nahi diya — phir se bolo.');
-      } else if (code === 'not-allowed' || code === 'service-not-allowed') {
-        setError('Mic permission denied. Browser settings mein allow karo.');
-      } else if (code === 'network') {
-        setError('Network error — internet check karo.');
-      } else if (code === 'aborted') {
-        // user stopped — not an error
-      } else {
-        setError(`Mic error: ${code}`);
+      if (code === 'no-speech' || code === 'aborted') {
+        // expected when user pauses or stops — auto-restart handler will resume
+        return;
       }
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        setError('Mic permission denied. Browser settings mein allow karo.');
+        shouldKeepListeningRef.current = false;
+        setListening(false);
+        return;
+      }
+      if (code === 'network') {
+        setError('Network error — internet check karo.');
+        shouldKeepListeningRef.current = false;
+        setListening(false);
+        return;
+      }
+      setError(`Mic error: ${code}`);
+      shouldKeepListeningRef.current = false;
       setListening(false);
     };
 
     recognition.onend = () => {
-      setListening(false);
       setInterim('');
+      // Reset the per-session dedup state so the next start fresh
+      emittedFinalsRef.current = new Set();
+      lastFinalTextRef.current = '';
+      if (shouldKeepListeningRef.current) {
+        try {
+          recognition.start();
+        } catch {
+          // already-started edge case — wait a tick and try once more
+          setTimeout(() => {
+            if (shouldKeepListeningRef.current) {
+              try {
+                recognition.start();
+              } catch {
+                shouldKeepListeningRef.current = false;
+                setListening(false);
+              }
+            }
+          }, 120);
+        }
+      } else {
+        setListening(false);
+      }
     };
 
     recognitionRef.current = recognition;
     return () => {
+      shouldKeepListeningRef.current = false;
       try {
         recognition.abort();
       } catch {}
@@ -106,19 +148,24 @@ export function VoiceTextarea({
     if (!recognitionRef.current) return;
     setError(null);
     emittedFinalsRef.current = new Set();
+    lastFinalTextRef.current = '';
+    shouldKeepListeningRef.current = true;
     try {
       recognitionRef.current.start();
       setListening(true);
     } catch (e: any) {
-      setError(e?.message || 'Mic shuru nahi ho payi.');
+      // already-started — just flip UI on
+      setListening(true);
     }
   }, []);
 
   const stop = useCallback(() => {
+    shouldKeepListeningRef.current = false;
     if (!recognitionRef.current) return;
     try {
       recognitionRef.current.stop();
     } catch {}
+    setListening(false);
   }, []);
 
   return (
@@ -151,7 +198,9 @@ export function VoiceTextarea({
             <MicIcon />
             <span>{listening ? 'Stop (Bandh karo)' : 'Bolo (Speak)'}</span>
           </button>
-          <span className="muted small voice-lang">Hindi/Hinglish • {lang}</span>
+          <span className="muted small voice-lang">
+            {listening ? 'Pause kar sakte ho — fir bolo, mic chalu rahega' : `Hindi/Hinglish • ${lang}`}
+          </span>
         </div>
       )}
 
