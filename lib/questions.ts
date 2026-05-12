@@ -1,0 +1,56 @@
+import type { InterviewRole, Question } from '@/lib/types';
+
+const nandu: Question[] = [
+  { id: 'Q1', section: 'Sec 1: Printing', prompt: 'Subah factory mein aane ke baad pehla kaam kya hota hai?', type: 'checkbox', options: ['Machine warm-up check', 'Previous din ka pending order check', 'Daily production schedule dekhna', 'Staff attendance aur shift assignment'], required: true },
+  { id: 'Q1b', section: 'Sec 1: Printing', prompt: 'Koi specific morning checklist jo aap mentally follow karte ho?', type: 'textarea' },
+  { id: 'Q2', section: 'Sec 1: Printing', prompt: 'Ek job complete hone mein kaunse steps hote hain? (Sab select karo)', type: 'checkbox', options: ['Challan se fabric receive', 'Design file setup', 'Korean paper select', 'Printing machine run', 'Fusing transfer', 'KATA inspection', 'KATA Certificate', 'Packing dispatch'], required: true },
+  { id: 'Q3', section: 'Sec 1: Printing', prompt: 'Fabric receive se dispatch tak kitna time lagta hai?', type: 'radio', options: ['Same day', '1-2 din', '3-4 din', '5-7 din'] },
+  { id: 'Q3b', section: 'Sec 1: Printing', prompt: 'Order delay hone ke main reasons?', type: 'checkbox', options: ['Fabric quality issue', 'Design file galat', 'Korean paper size mismatch', 'Delta-E color drift', 'Fusing maintenance', 'KATA shortage', 'Customer approval late'] },
+  { id: 'Q4', section: 'Sec 1: Printing', prompt: 'Quality hold kab lagate ho?', type: 'checkbox', options: ['Delta-E > 5', 'Banding', 'Ghosting', 'Colour drift roll-to-roll', 'Fading edges', 'Print sharpness kam'] },
+  { id: 'Q4b', section: 'Sec 1: Printing', prompt: 'Quality check ke baare mein koi process jo likha nahi hai?', type: 'textarea' },
+  { id: 'Q5', section: 'Sec 2: Machines', prompt: 'Active printing machines? (Sab select karo)', type: 'checkbox', options: ['PANTONE L1916 M1', 'L1916 M2', 'L1912', 'XENON U1', 'XENON U2'] },
+  { id: 'Q5b', section: 'Sec 2: Machines', prompt: '5 idle machines (3-head, purani) - kab on karni chahiye?', type: 'textarea' },
+  { id: 'Q6', section: 'Sec 2: Machines', prompt: 'Daily machine maintenance mein kya kya hota hai?', type: 'checkbox', options: ['Nozzle test', 'Ink flush', 'Paper tension', 'Printhead height', 'Temp calibration', 'Belt wipe'] },
+  { id: 'Q6b', section: 'Sec 2: Machines', prompt: 'Printhead repair ya replace kab karte ho? Signs?', type: 'textarea' },
+  { id: 'Q7', section: 'Sec 2: Machines', prompt: 'Fusing FM-01 ya FM-02 - job allocation?', type: 'radio', options: ['FM-02 bade orders', 'FM-01 chhote', 'Jo available ho', 'Koi fixed rule nahi'] },
+  { id: 'Q7b', section: 'Sec 2: Machines', prompt: 'Fusing temp aur speed - fabric type ke hisaab se?', type: 'textarea' },
+  { id: 'Q8', section: 'Sec 2: Machines', prompt: 'Spare parts jo hamesha stock mein rakhne chahiye?', type: 'checkbox', options: ['Printhead', 'Ink pump', 'Belt/roller', 'Heating elements', 'Paper holders', 'Fuses'] },
+  { id: 'Q8b', section: 'Sec 2: Machines', prompt: 'PANTONE parts supplier naam aur number?', type: 'textarea' },
+  { id: 'Q9', section: 'Sec 3: Paper/Ink', prompt: 'Korean paper width kaise decide karte ho?', type: 'radio', options: ['Customer fabric width se', 'Jo stock mein ho', 'Standard width', 'Machine width se'] },
+  { id: 'Q9b', section: 'Sec 3: Paper/Ink', prompt: '38 GSM vs 45 GSM - kab kaunsa? Difference?', type: 'textarea' },
+  { id: 'Q10', section: 'Sec 3: Paper/Ink', prompt: 'Korean paper stock kitne din ka rakhte ho?', type: 'radio', options: ['7-10 din', '15-20 din', '1 mahina', '2+ mahine'] },
+  { id: 'Q10b', section: 'Sec 3: Paper/Ink', prompt: 'Paper storage kahan aur kaise? Temp/humidity?', type: 'textarea' },
+  { id: 'Q11', section: 'Sec 3: Paper/Ink', prompt: 'PANTONE Royal Splash ink mein kya monitor karte ho?', type: 'checkbox', options: ['Ink expiry check', 'Storage temp', 'Batch test print', 'CMYK balance', 'Ink level alerts'] },
+  { id: 'Q11b', section: 'Sec 3: Paper/Ink', prompt: 'Ink supplier naam, contact, monthly quantity?', type: 'textarea' },
+  { id: 'Q12', section: 'Sec 4: KATA/Orders', prompt: 'Naya order accept se pehle kya check karte ho?', type: 'checkbox', options: ['Polyester % confirm', 'Machine capacity', 'Paper width available', 'Sample approval', 'Delivery feasible'] },
+  { id: 'Q12b', section: 'Sec 4: KATA/Orders', prompt: 'Sample approval mein aapka role? Kaun approve karta hai?', type: 'textarea' },
+  { id: 'Q13', section: 'Sec 4: KATA/Orders', prompt: 'KATA process mein exactly kya karte ho?', type: 'checkbox', options: ['Roll-by-roll meter measurement', 'Visual inspection', 'Defect marking + photo', 'Final meter vs order compare', 'Customer notify', 'KATA Certificate'] },
+  { id: 'Q13b', section: 'Sec 4: KATA/Orders', prompt: 'KATA mein common rejection/shortage reasons?', type: 'textarea' },
+  { id: 'Q14', section: 'Sec 4: KATA/Orders', prompt: 'Zyada orders hon to priority kaise?', type: 'radio', options: ['Urgent delivery', 'Book A priority', 'Bada order pehle', 'FIFO', 'Raghav bhai decide'] },
+  { id: 'Q14b', section: 'Sec 4: KATA/Orders', prompt: 'Book A vs Book B conflict - kaise handle kiya?', type: 'textarea' },
+  { id: 'Q15', section: 'Sec 5: Team', prompt: 'Team mein kitne log hain?', type: 'radio', options: ['5 se kam', '5-10', '10-15', '15+'] },
+  { id: 'Q15b', section: 'Sec 5: Team', prompt: 'Har member ka naam aur kaam? (MDO/QC/KATA/Dispatch)', type: 'textarea' },
+  { id: 'Q16', section: 'Sec 5: Team', prompt: 'MDO train karne mein kitna time lagta hai?', type: 'radio', options: ['1 hafte se kam', '2-4 hafte', '1-2 mahine', '3+ mahine'] },
+  { id: 'Q16b', section: 'Sec 5: Team', prompt: 'MDO certify kaise karte ho? Test/checklist?', type: 'textarea' },
+  { id: 'Q17', section: 'Sec 5: Team', prompt: 'Kaunse kaam sirf aap hi kar sakte ho?', type: 'checkbox', options: ['Temp/speed settings', 'Paper GSM select', 'Defect diagnosis', 'KATA approval', 'Machine idle decision', 'Shift staffing'] },
+  { id: 'Q18', section: 'Sec 5: Team', prompt: 'Emergency contacts - technician, electrician, suppliers?', type: 'textarea' },
+  { id: 'Q19', section: 'Sec 5: Team', prompt: 'Koi important baat jo company ko yaad rehni chahiye?', type: 'textarea' },
+];
+
+const md: Question[] = [
+  { id: 'M1', section: 'Management Vision', prompt: 'Aaj ke liye top 3 business priorities kya hain?', type: 'textarea' },
+  { id: 'M2', section: 'Management Vision', prompt: 'Aap kis cheez par bilkul compromise nahi karna chahte?', type: 'textarea' },
+  { id: 'M3', section: 'Decision Rules', prompt: 'Speed, quality, cost mein conflict aaye to decision rule kya hota hai?', type: 'radio', options: ['Speed first', 'Quality first', 'Cost first', 'Case by case'] },
+  { id: 'M4', section: 'Growth', prompt: 'Agale 90 din mein sabse bada growth goal kya hai?', type: 'textarea' },
+  { id: 'M5', section: 'Bottlenecks', prompt: 'Aaj growth ko sabse zyada kya block kar raha hai?', type: 'textarea' },
+  { id: 'M6', section: 'Knowledge Capture', prompt: 'Kis type ka knowledge sabse pehle document karna chahiye?', type: 'textarea' },
+  { id: 'M7', section: 'Operations', prompt: 'Konsi approvals ya decisions slow hain?', type: 'textarea' },
+  { id: 'M8', section: 'Reporting', prompt: 'Daily, weekly, monthly kya track hona chahiye?', type: 'textarea' },
+  { id: 'M9', section: 'Leadership', prompt: 'Kis person/role ki knowledge sabse critical hai?', type: 'textarea' },
+  { id: 'M10', section: 'Leadership', prompt: 'Koi final note jo LD Brain ko yaad rakhna chahiye?', type: 'textarea' },
+];
+
+export const QUESTION_SETS: Record<InterviewRole, Question[]> = {
+  nandu,
+  md,
+};

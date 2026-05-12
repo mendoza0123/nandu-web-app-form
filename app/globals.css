@@ -1,0 +1,57 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #07111f; color: #e6eef8; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+a { color: inherit; }
+button, input, textarea { font: inherit; }
+.container { max-width: 1080px; margin: 0 auto; padding: 24px; }
+.card { background: rgba(12, 22, 39, 0.88); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 20px; padding: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.25); }
+.hero { display: grid; gap: 16px; grid-template-columns: 1.5fr 1fr; align-items: start; }
+@media (max-width: 900px) { .hero { grid-template-columns: 1fr; } }
+.grid { display: grid; gap: 14px; }
+.grid-2 { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+.pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(59, 130, 246, 0.14); color: #bfdbfe; border: 1px solid rgba(96,165,250,0.25); }
+.muted { color: #9fb2c9; }
+.small { font-size: 0.9rem; }
+.h1 { font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.05; margin: 0; }
+.h2 { font-size: 1.35rem; margin: 0 0 12px; }
+.btn { cursor: pointer; border: 0; border-radius: 14px; padding: 12px 16px; background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; font-weight: 700; }
+.btn.secondary { background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.25); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.input, .textarea { width: 100%; padding: 14px 16px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.24); border-radius: 14px; color: #e6eef8; }
+.textarea { min-height: 140px; resize: vertical; }
+.option { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(148, 163, 184, 0.18); background: rgba(15, 23, 42, 0.6); cursor: pointer; }
+.option input { accent-color: #38bdf8; }
+.progress { height: 10px; border-radius: 999px; background: rgba(148, 163, 184, 0.16); overflow: hidden; }
+.progress > div { height: 100%; background: linear-gradient(90deg, #06b6d4, #8b5cf6); }
+.answer-list { display: grid; gap: 10px; }
+.answer-item { padding: 12px 14px; border-radius: 14px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.14); }
+
+.voice-wrap { display: grid; gap: 10px; }
+.voice-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.voice-lang { letter-spacing: 0.02em; }
+.mic-btn { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: 1px solid rgba(148, 163, 184, 0.28); border-radius: 999px; padding: 10px 16px; background: rgba(15, 23, 42, 0.85); color: #e6eef8; font-weight: 600; transition: background 0.18s ease, border-color 0.18s ease, transform 0.05s ease; }
+.mic-btn:hover:not(:disabled) { background: rgba(59, 130, 246, 0.14); border-color: rgba(96, 165, 250, 0.45); }
+.mic-btn:active:not(:disabled) { transform: translateY(1px); }
+.mic-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.mic-btn.mic-listening { background: rgba(239, 68, 68, 0.16); border-color: rgba(248, 113, 113, 0.55); color: #fecaca; animation: mic-pulse 1.4s ease-in-out infinite; }
+@keyframes mic-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); } 50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } }
+.voice-interim { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 14px; border-radius: 12px; background: rgba(59, 130, 246, 0.10); border: 1px dashed rgba(96, 165, 250, 0.35); color: #cbd5e1; font-style: italic; font-size: 0.95rem; }
+.voice-dot { width: 8px; height: 8px; border-radius: 999px; background: #ef4444; flex-shrink: 0; animation: voice-blink 1s ease-in-out infinite; }
+@keyframes voice-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.voice-error { margin: 0; padding: 10px 14px; border-radius: 12px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(248, 113, 113, 0.35); color: #fecaca; font-size: 0.9rem; }
+
+.question-layout { display: grid; gap: 18px; grid-template-columns: 1.2fr 0.8fr; }
+@media (max-width: 900px) { .question-layout { grid-template-columns: 1fr; } }
+.question-prompt { font-size: 1.15rem; line-height: 1.6; margin: 0; }
+
+@media (max-width: 640px) {
+  .container { padding: 16px; }
+  .card { padding: 16px; border-radius: 16px; }
+  .h1 { font-size: clamp(1.6rem, 8vw, 2.4rem); }
+  .h2 { font-size: 1.15rem; }
+  .question-prompt { font-size: 1.05rem; }
+  .btn { padding: 14px 16px; }
+  .mic-btn { padding: 12px 18px; width: 100%; justify-content: center; }
+  .voice-controls { flex-direction: column; align-items: stretch; }
+  .voice-lang { text-align: center; }
+}

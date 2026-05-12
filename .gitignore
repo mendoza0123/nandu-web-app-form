@@ -1,0 +1,12 @@
+node_modules
+.next
+.env.local
+.env*.local
+coverage
+.DS_Store
+
+# Local artifacts not part of the app
+ruvector.db
+*.tsbuildinfo
+.vscode
+.idea
