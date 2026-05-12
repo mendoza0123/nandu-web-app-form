@@ -54,4 +54,19 @@ button, input, textarea { font: inherit; }
   .mic-btn { padding: 12px 18px; width: 100%; justify-content: center; }
   .voice-controls { flex-direction: column; align-items: stretch; }
   .voice-lang { text-align: center; }
+  .recorder-recording { gap: 10px; }
+  .recorder-saved { flex-direction: column; align-items: stretch; }
 }
+
+.recorder-wrap { display: grid; gap: 10px; padding: 14px; border: 1px dashed rgba(148, 163, 184, 0.28); border-radius: 14px; background: rgba(15, 23, 42, 0.45); }
+.recorder-btn { display: inline-flex; align-items: center; gap: 10px; justify-content: center; }
+.recorder-stop { background: linear-gradient(135deg, #ef4444, #f97316); }
+.recorder-recording { display: grid; gap: 8px; }
+.recorder-meter { display: flex; align-items: center; gap: 8px; color: #fecaca; }
+.recorder-blink { width: 10px; height: 10px; border-radius: 999px; background: #ef4444; animation: voice-blink 1s ease-in-out infinite; }
+.recorder-time { font-variant-numeric: tabular-nums; font-weight: 600; }
+.recorder-bar { height: 6px; border-radius: 999px; background: rgba(148, 163, 184, 0.18); overflow: hidden; }
+.recorder-bar > div { height: 100%; background: linear-gradient(90deg, #ef4444, #f97316); transition: width 0.2s linear; }
+.recorder-saved { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.recorder-audio { flex: 1; min-width: 220px; }
+.answer-item .recorder-audio { width: 100%; margin-top: 8px; }

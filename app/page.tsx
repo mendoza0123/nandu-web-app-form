@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { QUESTION_SETS } from '@/lib/questions';
 import type { InterviewRole, Question } from '@/lib/types';
 import { VoiceTextarea } from '@/app/components/VoiceTextarea';
+import { VoiceRecorder } from '@/app/components/VoiceRecorder';
 
 type CompletionState = {
   summary: string;
@@ -31,9 +32,12 @@ export default function Page() {
   const [textValue, setTextValue] = useState('');
   const [multiValue, setMultiValue] = useState<string[]>([]);
   const [completion, setCompletion] = useState<CompletionState | null>(null);
-  const [savedAnswers, setSavedAnswers] = useState<Array<{ questionId: string; answer: string }>>([]);
+  const [savedAnswers, setSavedAnswers] = useState<Array<{ questionId: string; answer: string; audioUrl?: string | null; audioDurationSeconds?: number | null }>>([]);
   const [resumeOption, setResumeOption] = useState<ResumeOption | null>(null);
   const [resumeChecked, setResumeChecked] = useState(false);
+  const [audioPath, setAudioPath] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null);
 
   const questions = useMemo(() => (role ? QUESTION_SETS[role] : []), [role]);
   const current: Question | undefined = questions[index];
@@ -42,6 +46,9 @@ export default function Page() {
   useEffect(() => {
     setTextValue('');
     setMultiValue([]);
+    setAudioPath(null);
+    setAudioUrl(null);
+    setAudioDurationSeconds(null);
   }, [index, role]);
 
   useEffect(() => {
@@ -140,11 +147,21 @@ export default function Page() {
           questionText: current.prompt,
           section: current.section,
           answer,
+          audioPath,
+          audioDurationSeconds,
         }),
       });
       const json = await response.json();
       if (!response.ok) throw new Error(json.error || 'Failed to save answer');
-      setSavedAnswers((prev) => [...prev, { questionId: current.id, answer: Array.isArray(answer) ? answer.join(' | ') : answer }]);
+      setSavedAnswers((prev) => [
+        ...prev,
+        {
+          questionId: current.id,
+          answer: Array.isArray(answer) ? answer.join(' | ') : answer,
+          audioUrl,
+          audioDurationSeconds,
+        },
+      ]);
 
       if (index + 1 >= questions.length) {
         setStatus('Generating LLM summary...');
@@ -295,6 +312,26 @@ export default function Page() {
             </div>
           ) : null}
 
+          {current && sessionId ? (
+            <VoiceRecorder
+              sessionId={sessionId}
+              questionId={current.id}
+              audioPath={audioPath}
+              audioUrl={audioUrl}
+              onUploaded={(path, durationSeconds, url) => {
+                setAudioPath(path);
+                setAudioUrl(url);
+                setAudioDurationSeconds(durationSeconds);
+              }}
+              onCleared={() => {
+                setAudioPath(null);
+                setAudioUrl(null);
+                setAudioDurationSeconds(null);
+              }}
+              disabled={busy}
+            />
+          ) : null}
+
           <div className="grid-2">
             <button className="btn secondary" disabled={busy || index === 0} onClick={() => setIndex((v) => Math.max(0, v - 1))}>Back</button>
             <button className="btn" disabled={busy || !canContinue} onClick={() => saveAndNext(displayAnswer)}>Save &amp; Continue</button>
@@ -308,8 +345,11 @@ export default function Page() {
           <div className="answer-list">
             {savedAnswers.slice(-5).map((item) => (
               <div key={item.questionId} className="answer-item">
-                <div className="muted small">{item.questionId}</div>
+                <div className="muted small">{item.questionId}{item.audioDurationSeconds ? ` • voice note ${item.audioDurationSeconds}s` : ''}</div>
                 <div>{item.answer}</div>
+                {item.audioUrl ? (
+                  <audio controls src={item.audioUrl} preload="none" className="recorder-audio" />
+                ) : null}
               </div>
             ))}
             {savedAnswers.length === 0 ? <p className="muted small">No answers saved yet.</p> : null}

@@ -10,3 +10,5 @@ ruvector.db
 *.tsbuildinfo
 .vscode
 .idea
+
+.vercel
