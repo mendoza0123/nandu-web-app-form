@@ -1,0 +1,17 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp files
+*.tmp
+*.bak
+~$*
+
+# CSV/Excel data files (raw ERP exports — don't commit source data)
+*.csv
+*.xlsx
+*.xls
+
+# PDF source files
+*.pdf

@@ -360,6 +360,16 @@ export default function Page() {
               <h3 style={{ marginTop: 0 }}>LLM Summary</h3>
               <p className="small muted">Model: {completion.model || 'unknown'}</p>
               <pre style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, margin: 0 }}>{completion.summary}</pre>
+              {sessionId ? (
+                <a
+                  className="btn"
+                  href={`/api/export/${sessionId}`}
+                  style={{ marginTop: 14, display: 'inline-flex', textDecoration: 'none', justifyContent: 'center' }}
+                  download
+                >
+                  Download for LD-Brain (.md)
+                </a>
+              ) : null}
             </div>
           ) : null}
         </aside>
