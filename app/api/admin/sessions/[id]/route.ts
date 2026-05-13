@@ -57,3 +57,54 @@ export async function GET(
     return NextResponse.json({ error: error?.message || 'Failed to load session' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!checkAuth(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+
+    const supabase = getSupabaseAdmin();
+
+    // Collect audio paths so we can remove the blobs from Storage too.
+    // (FK rows in interview_answers + interview_summaries cascade-delete
+    // when the session row goes, but Supabase Storage objects do not.)
+    const { data: answers } = await supabase
+      .from('interview_answers')
+      .select('audio_path')
+      .eq('session_id', id);
+    const audioPaths = (answers ?? [])
+      .map((a) => a.audio_path)
+      .filter((p): p is string => Boolean(p));
+
+    if (audioPaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from('interview-audio')
+        .remove(audioPaths);
+      if (storageError) {
+        // Don't abort the whole delete on storage errors — just log; the DB
+        // rows are the source of truth, orphan audio can be cleaned later.
+        console.error('[admin delete] storage cleanup failed:', storageError);
+      }
+    }
+
+    const { error: deleteError } = await supabase
+      .from('interview_sessions')
+      .delete()
+      .eq('id', id);
+    if (deleteError) throw deleteError;
+
+    return NextResponse.json({ ok: true, deletedAudio: audioPaths.length });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || 'Failed to delete session' },
+      { status: 500 },
+    );
+  }
+}

@@ -256,6 +256,20 @@ strong { font-weight: 700; color: var(--text); }
 }
 .lang-toggle:hover { background: var(--accent-soft); border-color: var(--accent-line); }
 
+/* admin delete cross */
+.admin-x {
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  border-radius: 999px;
+  font-size: 1.15rem; line-height: 1; padding: 0;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.admin-x:hover { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+
 /* notes textarea (sits under MCQ options) */
 .notes-textarea { min-height: 64px; font-size: 0.95rem; background: var(--surface-2); }
 

@@ -362,7 +362,18 @@ export default function Page() {
       <div className="question-layout">
         <section className="card grid" style={{ gap: 14 }}>
           {current?.type === 'textarea' || current?.type === 'text' ? (
-            <VoiceTextarea value={textValue} onChange={setTextValue} disabled={busy} />
+            <VoiceTextarea
+              value={textValue}
+              onChange={setTextValue}
+              disabled={busy}
+              sessionId={sessionId}
+              questionId={current.id}
+              onAudioUploaded={(path, durationSeconds, url) => {
+                setAudioPath(path);
+                setAudioUrl(url);
+                setAudioDurationSeconds(durationSeconds);
+              }}
+            />
           ) : null}
 
           {current?.type === 'radio' && current.options ? (

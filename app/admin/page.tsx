@@ -96,6 +96,34 @@ export default function AdminPage() {
     }
   }
 
+  async function deleteSession(sessionId: string, label: string) {
+    const ok = typeof window !== 'undefined'
+      ? window.confirm(`Delete this session?\n\n${label}\n\nThis removes the session row, all answers, the summary, and any uploaded voice notes. Cannot be undone.`)
+      : false;
+    if (!ok) return;
+    try {
+      const useKey = key.trim();
+      const res = await fetch(`/api/admin/sessions/${sessionId}?key=${encodeURIComponent(useKey)}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `Delete failed (${res.status})`);
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      setStats((prev) => prev ? {
+        total: prev.total - 1,
+        inProgress: prev.inProgress - (sessions.find((s) => s.id === sessionId)?.status === 'in_progress' ? 1 : 0),
+        completed: prev.completed - (sessions.find((s) => s.id === sessionId)?.status === 'completed' ? 1 : 0),
+      } : prev);
+      setExpanded((prev) => {
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
+    } catch (e: any) {
+      setError(e?.message || 'Delete failed');
+    }
+  }
+
   async function toggleAnswers(sessionId: string) {
     const cur = expanded[sessionId];
     if (cur && !cur.loading && !cur.error) {
@@ -197,6 +225,7 @@ export default function AdminPage() {
               copied={copiedId === s.id}
               detail={expanded[s.id]}
               onToggleAnswers={toggleAnswers}
+              onDelete={deleteSession}
               audioUrl={audioUrl}
             />
           ))
@@ -232,6 +261,7 @@ function SessionRow({
   copied,
   detail,
   onToggleAnswers,
+  onDelete,
   audioUrl,
 }: {
   session: Session;
@@ -240,6 +270,7 @@ function SessionRow({
   copied: boolean;
   detail: SessionDetail | undefined;
   onToggleAnswers: (id: string) => void;
+  onDelete: (id: string, label: string) => void;
   audioUrl: (path: string | null) => string | null;
 }) {
   const pct = session.totalQuestions ? Math.round((session.answeredCount / session.totalQuestions) * 100) : 0;
@@ -266,8 +297,19 @@ function SessionRow({
           </span>
           <StatusPill status={session.status} />
         </div>
-        <div className="muted small" style={{ fontFamily: 'ui-monospace, monospace' }}>
-          {session.id.slice(0, 8)}…
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="muted small" style={{ fontFamily: 'ui-monospace, monospace' }}>
+            {session.id.slice(0, 8)}…
+          </span>
+          <button
+            type="button"
+            className="admin-x"
+            onClick={() => onDelete(session.id, `${session.respondent_name || '(no name)'} · ${session.role} · ${session.answeredCount} answered`)}
+            aria-label="Delete session"
+            title="Delete this session and all its answers / voice notes"
+          >
+            ×
+          </button>
         </div>
       </div>
 
