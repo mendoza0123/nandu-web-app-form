@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { QUESTION_SETS } from '@/lib/questions';
-import type { InterviewRole, Question } from '@/lib/types';
+import type { InterviewRole, PromptLang, Question } from '@/lib/types';
 import { VoiceTextarea } from '@/app/components/VoiceTextarea';
 import { VoiceRecorder } from '@/app/components/VoiceRecorder';
 
@@ -21,6 +21,12 @@ type ResumeOption = {
 };
 
 const STORAGE_KEY = 'nandu_session_id';
+const LANG_KEY = 'nandu_prompt_lang';
+// Bumped whenever lib/questions.ts changes shape/content in a way that
+// invalidates stored sessions. Stale sessions on a previous schema are
+// abandoned (the rows stay in Supabase but the UI starts fresh).
+const QUESTION_SET_VERSION = 'v2';
+const QUESTION_SET_VERSION_KEY = 'nandu_question_set_version';
 
 export default function Page() {
   const [role, setRole] = useState<InterviewRole | null>(null);
@@ -38,6 +44,8 @@ export default function Page() {
   const [audioPath, setAudioPath] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null);
+  const [notesValue, setNotesValue] = useState('');
+  const [lang, setLang] = useState<PromptLang>('en');
 
   const questions = useMemo(() => (role ? QUESTION_SETS[role] : []), [role]);
   const current: Question | undefined = questions[index];
@@ -49,10 +57,25 @@ export default function Page() {
     setAudioPath(null);
     setAudioUrl(null);
     setAudioDurationSeconds(null);
+    setNotesValue('');
   }, [index, role]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const storedLang = window.localStorage.getItem(LANG_KEY);
+    if (storedLang === 'hi' || storedLang === 'en') setLang(storedLang);
+
+    // One-time wipe: when the question set schema changes (v1 -> v2 with the
+    // 35 MCQ PDF set), abandon stored sessions from the old schema so resume
+    // doesn't drop the user into a misaligned index.
+    const storedVersion = window.localStorage.getItem(QUESTION_SET_VERSION_KEY);
+    if (storedVersion !== QUESTION_SET_VERSION) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.setItem(QUESTION_SET_VERSION_KEY, QUESTION_SET_VERSION);
+      setResumeChecked(true);
+      return;
+    }
+
     const storedId = window.localStorage.getItem(STORAGE_KEY);
     if (!storedId) {
       setResumeChecked(true);
@@ -133,11 +156,28 @@ export default function Page() {
     setResumeOption(null);
   }
 
+  function toggleLang() {
+    setLang((prev) => {
+      const next: PromptLang = prev === 'hi' ? 'en' : 'hi';
+      if (typeof window !== 'undefined') window.localStorage.setItem(LANG_KEY, next);
+      return next;
+    });
+  }
+
   async function saveAndNext(answer: string | string[]) {
     if (!current || !sessionId) return;
     setBusy(true);
     setStatus('Saving answer...');
     try {
+      // For MCQ-style radio questions, append the optional Notes / अन्य
+      // textarea to the saved answer so it reaches the DB and Sheets.
+      const trimmedNotes = notesValue.trim();
+      let combinedAnswer: string | string[] = answer;
+      if (current.type === 'radio' && current.allowNotes && trimmedNotes) {
+        const base = Array.isArray(answer) ? answer.join(' | ') : String(answer);
+        combinedAnswer = base ? `${base} | Notes: ${trimmedNotes}` : `Notes: ${trimmedNotes}`;
+      }
+
       const response = await fetch('/api/answers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,7 +186,7 @@ export default function Page() {
           questionId: current.id,
           questionText: current.prompt,
           section: current.section,
-          answer,
+          answer: combinedAnswer,
           audioPath,
           audioDurationSeconds,
         }),
@@ -157,7 +197,7 @@ export default function Page() {
         ...prev,
         {
           questionId: current.id,
-          answer: Array.isArray(answer) ? answer.join(' | ') : answer,
+          answer: Array.isArray(combinedAnswer) ? combinedAnswer.join(' | ') : combinedAnswer,
           audioUrl,
           audioDurationSeconds,
         },
@@ -273,15 +313,29 @@ export default function Page() {
       <div className="card grid" style={{ gap: 12 }}>
         <div className="grid-2" style={{ alignItems: 'center' }}>
           <div>
-            <span className="pill">Session #{sessionId.slice(0, 8)} • {role.toUpperCase()}</span>
-            <h1 className="h2" style={{ marginTop: 12 }}>{current?.section}</h1>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="pill">Session #{sessionId.slice(0, 8)} • {role.toUpperCase()}</span>
+              <button
+                type="button"
+                className="lang-toggle"
+                onClick={toggleLang}
+                aria-label="Toggle language"
+                title="Toggle between Hinglish (Latin) and Hindi (Devanagari)"
+              >
+                {lang === 'hi' ? 'क → ABC' : 'ABC → क'}
+              </button>
+            </div>
+            <h1 className="h2" style={{ marginTop: 12 }}>
+              {(lang === 'hi' && current?.sectionHi) || current?.section}
+            </h1>
           </div>
           <div style={{ justifySelf: 'end', minWidth: 240, width: '100%' }}>
             <div className="progress"><div style={{ width: `${progress}%` }} /></div>
             <p className="muted small" style={{ marginTop: 8 }}>{index + 1} of {questions.length} questions</p>
           </div>
         </div>
-        <p className="question-prompt">{current?.prompt}</p>
+        <p className="question-prompt">{(lang === 'hi' && current?.promptHi) || current?.prompt}</p>
+        {current?.help ? <p className="muted small" style={{ margin: 0 }}>{current.help}</p> : null}
       </div>
 
       <div className="question-layout">
@@ -292,23 +346,56 @@ export default function Page() {
 
           {current?.type === 'radio' && current.options ? (
             <div className="grid" style={{ gap: 10 }}>
-              {current.options.map((option) => (
-                <label key={option} className="option">
-                  <input type="radio" name={current.id} checked={textValue === option} onChange={() => setTextValue(option)} />
-                  <span>{option}</span>
-                </label>
-              ))}
+              {current.options.map((option, i) => {
+                // The saved value is always the English (Latin) option so the
+                // DB stays consistent regardless of which script the user is
+                // reading in. The label below shows the user's chosen script.
+                const display =
+                  lang === 'hi' && current.optionsHi && current.optionsHi[i]
+                    ? current.optionsHi[i]
+                    : option;
+                return (
+                  <label key={option} className="option">
+                    <input
+                      type="radio"
+                      name={current.id}
+                      checked={textValue === option}
+                      onChange={() => setTextValue(option)}
+                    />
+                    <span>{display}</span>
+                  </label>
+                );
+              })}
+              {current.allowNotes ? (
+                <textarea
+                  className="textarea notes-textarea"
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  placeholder={lang === 'hi' ? 'अन्य / Notes (optional)' : 'Notes / अन्य (optional)'}
+                  disabled={busy}
+                />
+              ) : null}
             </div>
           ) : null}
 
           {current?.type === 'checkbox' && current.options ? (
             <div className="grid" style={{ gap: 10 }}>
-              {current.options.map((option) => (
-                <label key={option} className="option">
-                  <input type="checkbox" checked={multiValue.includes(option)} onChange={() => toggleMulti(option)} />
-                  <span>{option}</span>
-                </label>
-              ))}
+              {current.options.map((option, i) => {
+                const display =
+                  lang === 'hi' && current.optionsHi && current.optionsHi[i]
+                    ? current.optionsHi[i]
+                    : option;
+                return (
+                  <label key={option} className="option">
+                    <input
+                      type="checkbox"
+                      checked={multiValue.includes(option)}
+                      onChange={() => toggleMulti(option)}
+                    />
+                    <span>{display}</span>
+                  </label>
+                );
+              })}
             </div>
           ) : null}
 

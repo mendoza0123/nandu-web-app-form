@@ -18,12 +18,20 @@ export type QuestionType = 'radio' | 'checkbox' | 'textarea' | 'text' | 'number'
 export interface Question {
   id: string;
   section: string;
+  sectionHi?: string;
   prompt: string;
+  promptHi?: string;
   type: QuestionType;
   options?: string[];
+  optionsHi?: string[];
   help?: string;
   required?: boolean;
+  // For MCQ-style questions, allow an additional free-text "Notes" / अन्य
+  // textarea below the options so Nandu can write in something beyond A/B/C/D.
+  allowNotes?: boolean;
 }
+
+export type PromptLang = 'hi' | 'en';
 
 export interface SessionResponse {
   id: string;
