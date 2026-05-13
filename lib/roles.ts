@@ -50,6 +50,25 @@ export function listVisibleCodedRoles(): RoleMeta[] {
   return Object.values(CODED_ROLES).filter((r) => r.visible !== false);
 }
 
+/**
+ * Roles shown on the landing chooser. If NEXT_PUBLIC_INTERVIEW_ROLE is set
+ * and matches a known coded role, only that role is returned — this lets
+ * us deploy the same codebase as multiple per-respondent Vercel projects
+ * (Nandu URL, Gaurav URL, etc.) without forking the code. Otherwise falls
+ * back to the visible-flag filter.
+ *
+ * Note: NEXT_PUBLIC_ vars are inlined at build time so this runs safely
+ * inside "use client" components without exposing anything sensitive.
+ */
+export function listLandingRoles(): RoleMeta[] {
+  const lock = (process.env.NEXT_PUBLIC_INTERVIEW_ROLE || '').trim();
+  if (lock) {
+    const locked = CODED_ROLES[lock];
+    return locked ? [locked] : [];
+  }
+  return listVisibleCodedRoles();
+}
+
 // Folder shape for the LD-Brain markdown export. Falls back to the
 // group-level overview folder when a role has no company.
 export function ldBrainFolder(company: string | undefined | null): string {
