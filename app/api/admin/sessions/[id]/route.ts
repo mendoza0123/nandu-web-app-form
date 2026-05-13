@@ -4,11 +4,11 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 export const runtime = 'nodejs';
 
 function checkAuth(req: Request): boolean {
-  const passcode = process.env.ADMIN_PASSCODE;
+  const passcode = (process.env.ADMIN_PASSCODE || '').trim();
   if (!passcode) return false;
   const url = new URL(req.url);
-  const key = url.searchParams.get('key') || req.headers.get('x-admin-key');
-  return key === passcode;
+  const rawKey = url.searchParams.get('key') || req.headers.get('x-admin-key') || '';
+  return rawKey.trim() === passcode;
 }
 
 export async function GET(

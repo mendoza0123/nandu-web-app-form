@@ -5,10 +5,11 @@ import { QUESTION_SETS } from '@/lib/questions';
 export const runtime = 'nodejs';
 
 function checkAuth(req: Request): { ok: boolean; reason?: string } {
-  const passcode = process.env.ADMIN_PASSCODE;
+  const passcode = (process.env.ADMIN_PASSCODE || '').trim();
   if (!passcode) return { ok: false, reason: 'ADMIN_PASSCODE env var is not set on the deployment.' };
   const url = new URL(req.url);
-  const key = url.searchParams.get('key') || req.headers.get('x-admin-key');
+  const rawKey = url.searchParams.get('key') || req.headers.get('x-admin-key') || '';
+  const key = rawKey.trim();
   if (key !== passcode) return { ok: false, reason: 'Wrong or missing key.' };
   return { ok: true };
 }
