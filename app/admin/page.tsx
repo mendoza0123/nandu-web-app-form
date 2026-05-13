@@ -15,6 +15,24 @@ type Session = {
   lastAnswerAt: string | null;
 };
 
+type AnswerRow = {
+  id: string;
+  question_id: string;
+  question_text: string;
+  section: string;
+  answer_text: string;
+  audio_path: string | null;
+  audio_duration_seconds: number | null;
+  created_at: string;
+};
+
+type SessionDetail = {
+  answers: AnswerRow[];
+  summary: { summary_text: string; llm_model: string | null } | null;
+  loading: boolean;
+  error: string | null;
+};
+
 type Stats = {
   total: number;
   inProgress: number;
@@ -30,6 +48,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [origin, setOrigin] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, SessionDetail | undefined>>({});
 
   // Read ?key= from URL on first load + remember origin for resume URL
   useEffect(() => {
@@ -75,6 +94,41 @@ export default function AdminPage() {
     } catch {
       window.prompt('Copy this URL and send to Nandu:', url);
     }
+  }
+
+  async function toggleAnswers(sessionId: string) {
+    const cur = expanded[sessionId];
+    if (cur && !cur.loading && !cur.error) {
+      // already loaded — just collapse
+      setExpanded((prev) => {
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
+      return;
+    }
+    setExpanded((prev) => ({ ...prev, [sessionId]: { answers: [], summary: null, loading: true, error: null } }));
+    try {
+      const useKey = key.trim();
+      const res = await fetch(`/api/admin/sessions/${sessionId}?key=${encodeURIComponent(useKey)}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to load answers');
+      setExpanded((prev) => ({
+        ...prev,
+        [sessionId]: { answers: json.answers || [], summary: json.summary || null, loading: false, error: null },
+      }));
+    } catch (e: any) {
+      setExpanded((prev) => ({
+        ...prev,
+        [sessionId]: { answers: [], summary: null, loading: false, error: e?.message || 'Failed' },
+      }));
+    }
+  }
+
+  const supabaseUrl = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL || '' : '';
+  function audioUrl(path: string | null): string | null {
+    if (!path) return null;
+    return `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/interview-audio/${path}`;
   }
 
   if (!authed) {
@@ -134,7 +188,18 @@ export default function AdminPage() {
         {sessions.length === 0 ? (
           <p className="muted">No sessions yet.</p>
         ) : (
-          sessions.map((s) => <SessionRow key={s.id} session={s} origin={origin} onCopyResume={copyResumeUrl} copied={copiedId === s.id} />)
+          sessions.map((s) => (
+            <SessionRow
+              key={s.id}
+              session={s}
+              origin={origin}
+              onCopyResume={copyResumeUrl}
+              copied={copiedId === s.id}
+              detail={expanded[s.id]}
+              onToggleAnswers={toggleAnswers}
+              audioUrl={audioUrl}
+            />
+          ))
         )}
       </div>
     </main>
@@ -165,16 +230,23 @@ function SessionRow({
   origin,
   onCopyResume,
   copied,
+  detail,
+  onToggleAnswers,
+  audioUrl,
 }: {
   session: Session;
   origin: string;
   onCopyResume: (id: string) => void;
   copied: boolean;
+  detail: SessionDetail | undefined;
+  onToggleAnswers: (id: string) => void;
+  audioUrl: (path: string | null) => string | null;
 }) {
   const pct = session.totalQuestions ? Math.round((session.answeredCount / session.totalQuestions) * 100) : 0;
   const isInProgress = session.status === 'in_progress';
   const isCompleted = session.status === 'completed';
   const exportUrl = `/api/export/${session.id}`;
+  const isExpanded = Boolean(detail);
   return (
     <div
       style={{
@@ -215,6 +287,14 @@ function SessionRow({
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          className="btn secondary"
+          onClick={() => onToggleAnswers(session.id)}
+          disabled={session.answeredCount === 0}
+          title={session.answeredCount === 0 ? 'No answers yet' : ''}
+        >
+          {isExpanded ? 'Hide answers' : `View ${session.answeredCount} answer${session.answeredCount === 1 ? '' : 's'}`}
+        </button>
         {isInProgress ? (
           <button className="btn secondary" onClick={() => onCopyResume(session.id)}>
             {copied ? 'Copied!' : 'Copy resume URL'}
@@ -226,6 +306,103 @@ function SessionRow({
           </a>
         ) : null}
       </div>
+
+      {isExpanded && detail ? (
+        <div
+          style={{
+            marginTop: 8,
+            padding: 14,
+            borderRadius: 12,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            display: 'grid',
+            gap: 12,
+          }}
+        >
+          {detail.loading ? (
+            <p className="muted small" style={{ margin: 0 }}>Loading answers…</p>
+          ) : detail.error ? (
+            <p className="voice-error" style={{ margin: 0 }}>{detail.error}</p>
+          ) : (
+            <>
+              {detail.summary?.summary_text ? (
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    background: 'var(--accent-soft)',
+                    border: '1px solid var(--accent-line)',
+                  }}
+                >
+                  <div className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, marginBottom: 6 }}>
+                    LLM Summary
+                  </div>
+                  <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit', fontSize: '0.92rem', lineHeight: 1.55 }}>
+                    {detail.summary.summary_text}
+                  </pre>
+                </div>
+              ) : null}
+
+              {detail.answers.length === 0 ? (
+                <p className="muted small" style={{ margin: 0 }}>No answers yet.</p>
+              ) : (
+                detail.answers.map((a) => <AnswerCard key={a.id} answer={a} audioUrl={audioUrl} />)
+              )}
+            </>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function AnswerCard({
+  answer,
+  audioUrl,
+}: {
+  answer: AnswerRow;
+  audioUrl: (path: string | null) => string | null;
+}) {
+  const url = audioUrl(answer.audio_path);
+  return (
+    <div
+      style={{
+        padding: 12,
+        borderRadius: 10,
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+        display: 'grid',
+        gap: 8,
+      }}
+    >
+      <div className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+        {answer.question_id} · {answer.section}
+      </div>
+      <div style={{ fontWeight: 600, lineHeight: 1.5 }}>{answer.question_text}</div>
+      {answer.answer_text ? (
+        <div
+          style={{
+            padding: '8px 12px',
+            borderLeft: '3px solid var(--accent)',
+            background: 'rgba(11, 110, 90, 0.05)',
+            borderRadius: 6,
+            whiteSpace: 'pre-wrap',
+            lineHeight: 1.5,
+          }}
+        >
+          {answer.answer_text}
+        </div>
+      ) : (
+        <em className="muted small">(no text answer)</em>
+      )}
+      {url ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <audio controls src={url} preload="none" style={{ flex: 1, minWidth: 220, height: 36 }} />
+          {answer.audio_duration_seconds ? (
+            <span className="muted small">{answer.audio_duration_seconds}s voice note</span>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
