@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { QUESTION_SETS } from '@/lib/questions';
+import { listVisibleCodedRoles } from '@/lib/roles';
 import type { InterviewRole, PromptLang, Question } from '@/lib/types';
 import { VoiceTextarea } from '@/app/components/VoiceTextarea';
 import { VoiceRecorder } from '@/app/components/VoiceRecorder';
@@ -256,11 +257,11 @@ export default function Page() {
       <main className="container">
         <section className="hero">
           <div className="card grid" style={{ gap: 18 }}>
-            <span className="pill">LD Brain · Factory Knowledge Capture</span>
-            <h1 className="h1">Nandu Bhai Interview</h1>
+            <span className="pill">LD Brain · Knowledge Capture</span>
+            <h1 className="h1">LD Brain Interview</h1>
             <p className="muted" style={{ lineHeight: 1.7, fontSize: '1.05rem' }}>
               Ek aasan form jo ek-ek sawaal poochta hai. Type karo ya mic dabake bolo —
-              Hindi/English mix bhi chalega. Beech mein ruk sakte ho, baad mein wahi se shuru
+              Hindi / English mix bhi chalega. Beech mein ruk sakte ho, baad mein wahi se shuru
               hoga. Last mein ek summary banegi jo LD Brain mein save ho jaayegi.
             </p>
             <div className="grid-2">
@@ -299,16 +300,35 @@ export default function Page() {
                   <span className="muted small">Respondent name</span>
                   <input
                     className="input"
-                    placeholder="Nandu Bhai"
+                    placeholder="Aapka naam"
                     value={respondentName}
                     onChange={(e) => setRespondentName(e.target.value)}
                   />
                 </label>
 
+                <p className="muted small" style={{ margin: 0 }}>Choose the flow that applies to you:</p>
                 <div className="grid" style={{ gap: 10 }}>
-                  <button className="btn" disabled={busy} onClick={() => startSession('nandu')}>
-                    Start Nandu Flow
-                  </button>
+                  {listVisibleCodedRoles().map((roleMeta) => (
+                    <button
+                      key={roleMeta.key}
+                      className="btn"
+                      disabled={busy}
+                      onClick={() => startSession(roleMeta.key)}
+                      style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4, textAlign: 'left' }}
+                    >
+                      <span style={{ fontSize: '1.05rem', fontWeight: 700 }}>Start {roleMeta.label} flow</span>
+                      {roleMeta.description ? (
+                        <span style={{ fontSize: '0.82rem', fontWeight: 500, opacity: 0.92, lineHeight: 1.4 }}>
+                          {roleMeta.description}
+                        </span>
+                      ) : null}
+                      {roleMeta.company || roleMeta.expectedMinutes ? (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 500, opacity: 0.78, letterSpacing: '0.02em' }}>
+                          {[roleMeta.company, roleMeta.expectedMinutes ? `~${roleMeta.expectedMinutes} min` : null].filter(Boolean).join(' · ')}
+                        </span>
+                      ) : null}
+                    </button>
+                  ))}
                 </div>
                 <p className="muted small">{status}</p>
               </>

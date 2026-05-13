@@ -11,6 +11,8 @@ export interface RoleMeta {
   expectedMinutes?: number;
   source: RoleSource;
   description?: string;
+  // false → hidden from the landing page chooser. Defaults to true.
+  visible?: boolean;
 }
 
 export type QuestionType = 'radio' | 'checkbox' | 'textarea' | 'text' | 'number' | 'date';

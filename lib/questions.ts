@@ -959,6 +959,158 @@ const nandu: Question[] = [
   },
 ];
 
+// Source: All_Questions_list/LD_Brain_Questionnaire_Gaurav.pdf
+// Gaurav Ji — LD Silk Mills, Sales Principal. 45-60 min interview-style
+// questionnaire covering 7 brain gaps (S1, S2, S5, S10, S13, S14, C8).
+//
+// Mostly long-form textarea per question (multi-part prompts, sub-bullets
+// described in the help line). One MCQ for the one-time-buyer reason in C1
+// which the PDF gives as a discrete a-f list.
+const gaurav: Question[] = [
+  // ─────────────────────────────────────────────
+  // Section A — SP Assignment (do this first — unblocks everything)
+  // ─────────────────────────────────────────────
+  {
+    id: 'A1',
+    section: 'Sec A: SP Assignment',
+    prompt:
+      "Top 50 accounts without SP assignment. The brain currently shows ₹45.94 Cr (68.4% of total Silk revenue) as 'UNASSIGNED' in SAB — no salesperson tagged to any of the major accounts. Can you commit to assigning a salesperson to each of the top 50 accounts in SAB this week? Describe your action plan or any blockers.",
+    type: 'textarea',
+    help: "Use 'Gaurav' for accounts you handle directly, 'Rinku Bhai' or appropriate broker code for his accounts, 'House' / catch-all for direct walk-ins with no SP. Unlocks SP net revenue ranking and the relationship-ownership map.",
+    required: true,
+  },
+  {
+    id: 'A2',
+    section: 'Sec A: SP Assignment',
+    prompt:
+      'Relationship ownership map — for each of the top 20 Silk accounts by revenue, who is the named human relationship owner? Cover at minimum: Donear Industries (₹6.63 Cr), Amarson International (₹1.66 Cr), PR EXPO TRADELINK (₹6.82 Cr combined), Karani Clothing (₹1.11 Cr), Mahendra Ji Knit Wear (₹1.08 Cr), Leena Garments / Regent Creation / D.P.Traders (₹60–62L each), and any others in the top 20.',
+    type: 'textarea',
+    help: "For each account: name | owner (you / broker / SP) | phone | how often you/they call | if they stopped buying tomorrow — would we know why?",
+    required: true,
+  },
+
+  // ─────────────────────────────────────────────
+  // Section B — Chur Textiles (urgent — ₹5.7 Cr churn)
+  // ─────────────────────────────────────────────
+  {
+    id: 'B1',
+    section: 'Sec B: Chur Textiles',
+    prompt:
+      'Chur Textiles churn — they were buying ₹1.9 Cr/year, did zero in FY 25-26. Please cover: (a) Why did they stop? (b) Did they tell you they were switching or did they just go quiet? (c) Who was managing this relationship — you, a broker, or an SP? (d) Has anyone at Silk spoken to Chur in the last 6 months? (e) Which competitor are they buying from now? (f) Any chance of winning them back — what would it take?',
+    type: 'textarea',
+    required: true,
+  },
+  {
+    id: 'B2',
+    section: 'Sec B: Chur Textiles',
+    prompt:
+      "Early warning system after Chur Textiles: are there any other large accounts that have been quieter than usual recently? Any top-20 account you have a gut feel about that's at risk of reducing or stopping?",
+    type: 'textarea',
+  },
+
+  // ─────────────────────────────────────────────
+  // Section C — One-and-done customer qualification
+  // ─────────────────────────────────────────────
+  {
+    id: 'C1a',
+    section: 'Sec C: One-and-Done Customers',
+    prompt:
+      'Of the 531 one-time Silk buyers — what is the most common reason a new customer buys once and doesn\'t return? (Tick all that apply)',
+    type: 'checkbox',
+    options: [
+      'A. Price — found cheaper elsewhere',
+      'B. Quality — they weren\'t satisfied',
+      'C. Range — we didn\'t have what they needed next time',
+      'D. They were just sampling us and went back to their regular supplier',
+      'E. They placed one big order for a specific project and don\'t need fabric regularly',
+      'F. We never followed up with them',
+    ],
+    allowNotes: true,
+  },
+  {
+    id: 'C1b',
+    section: 'Sec C: One-and-Done Customers',
+    prompt:
+      'Are there specific types of customers (by geography, product type, or order size) that are more likely to be reactivatable? Give examples if you can.',
+    type: 'textarea',
+  },
+  {
+    id: 'C1c',
+    section: 'Sec C: One-and-Done Customers',
+    prompt:
+      "What is the minimum order history that makes a customer worth a reactivation call? (e.g., 'only worth calling if their first order was > ₹50K')",
+    type: 'textarea',
+  },
+  {
+    id: 'C2',
+    section: 'Sec C: One-and-Done Customers',
+    prompt:
+      'Ideal Customer Profile based on your years of experience: (a) What does your best customer look like — what do they do, where are they located, how often do they buy, how many meters per order? (b) Is there a type of customer you\'ve learned to avoid (one-time, price-only, high-return, slow payer)? (c) Do your best customers have anything in common — industry, location, business type?',
+    type: 'textarea',
+  },
+
+  // ─────────────────────────────────────────────
+  // Section D — Broker ↔ Customer Map
+  // ─────────────────────────────────────────────
+  {
+    id: 'D1',
+    section: 'Sec D: Broker ↔ Customer Map',
+    prompt:
+      'For the top 5 brokers (Rinku Bhai and the next 4): (a) Which specific customers did each broker introduce? (b) If Rinku Bhai stopped working with us tomorrow — which customers would be at risk? (c) Are there customers brought by a broker but who now deal directly with us?',
+    type: 'textarea',
+  },
+  {
+    id: 'D2',
+    section: 'Sec D: Broker ↔ Customer Map',
+    prompt:
+      'Broker exclusivity: (a) Are there customers with an exclusive relationship with a specific broker (we can only reach them through that broker)? (b) Are there customers where the broker relationship is weakening and we should build a direct line before the broker moves away?',
+    type: 'textarea',
+  },
+
+  // ─────────────────────────────────────────────
+  // Section E — Cotton Sales Intelligence
+  // ─────────────────────────────────────────────
+  {
+    id: 'E1',
+    section: 'Sec E: Cotton Sales Intelligence',
+    prompt:
+      'Cotton pipeline — Cotton has capacity but needs external customers beyond Vhagar. (a) Are you actively pitching Cotton\'s manufacturing to any external buyers? (b) Any serious conversations — what happened? (c) Ideal first external Cotton customer profile — domestic apparel brand, export agent, etailer?',
+    type: 'textarea',
+  },
+  {
+    id: 'E2',
+    section: 'Sec E: Cotton Sales Intelligence',
+    prompt:
+      'Lost deals and competitive intelligence on Cotton: (a) Have you pitched Cotton to any buyer who said no or went to a competitor? (b) What was the reason given? (c) What are competitors charging per piece for similar garments? (d) What certifications are buyers most commonly asking for that Cotton doesn\'t have yet?',
+    type: 'textarea',
+  },
+  {
+    id: 'E3',
+    section: 'Sec E: Cotton Sales Intelligence',
+    prompt:
+      "Cotton pricing: (a) For mass production garments (basic shirts / trousers), what is Cotton charging per piece? (b) What do you think the market rate for similar CMT work is? (c) Is Cotton's current pricing competitive, above market, or below market?",
+    type: 'textarea',
+  },
+
+  // ─────────────────────────────────────────────
+  // Section F — Mill Relationships (supporting Laxmikant's capture project)
+  // ─────────────────────────────────────────────
+  {
+    id: 'F1',
+    section: 'Sec F: Mill Relationships',
+    prompt:
+      'Mill relationships from your sales side (Laxmikant manages buying): (a) Are there mills that also source fabrics from customers — making them both supplier AND customer? (b) K.K. DESIGNERS appears as both a top-3 grey supplier AND a high-return customer. What is their actual relationship with LD Silk — mill, trader, or something else? (c) Any conflicts of interest in the mill network you\'re aware of?',
+    type: 'textarea',
+  },
+  {
+    id: 'F2',
+    section: 'Sec F: Mill Relationships',
+    prompt:
+      'Mill succession (your view): (a) Are there mills becoming unreliable — late deliveries, quality slippage? (b) Newer mills you\'ve heard good things about that Laxmikant Ji should look at?',
+    type: 'textarea',
+  },
+];
+
 const md: Question[] = [
   { id: 'M1', section: 'Management Vision', prompt: 'Aaj ke liye top 3 business priorities kya hain?', type: 'textarea' },
   { id: 'M2', section: 'Management Vision', prompt: 'Aap kis cheez par bilkul compromise nahi karna chahte?', type: 'textarea' },
@@ -974,5 +1126,6 @@ const md: Question[] = [
 
 export const QUESTION_SETS: Record<InterviewRole, Question[]> = {
   nandu,
+  gaurav,
   md,
 };
