@@ -9,13 +9,6 @@ type Props = {
   placeholder?: string;
   lang?: string;
   disabled?: boolean;
-  // If both sessionId and questionId are provided AND MediaRecorder is
-  // supported, the mic also captures raw audio alongside live transcription
-  // and uploads it on stop. onAudioUploaded fires with the resulting storage
-  // path + duration so the parent can attach it to the next /api/answers save.
-  sessionId?: string;
-  questionId?: string;
-  onAudioUploaded?: (audioPath: string, durationSeconds: number, audioUrl: string) => void;
 };
 
 export function VoiceTextarea({
@@ -24,33 +17,21 @@ export function VoiceTextarea({
   placeholder = 'Type your answer here, or tap the mic to speak...',
   lang = 'hi-IN',
   disabled = false,
-  sessionId,
-  questionId,
-  onAudioUploaded,
 }: Props) {
   const [listening, setListening] = useState(false);
-  const [uploadingAudio, setUploadingAudio] = useState(false);
   const [supported, setSupported] = useState<boolean | null>(null);
   const [interim, setInterim] = useState('');
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
-  const onAudioUploadedRef = useRef(onAudioUploaded);
   // Android Chrome ignores continuous=true and emits cumulative finals.
   // Using continuous=false + manual auto-restart on onend gives a
   // feels-continuous UX while avoiding the cumulative-final duplication bug.
   const shouldKeepListeningRef = useRef(false);
   const emittedFinalsRef = useRef<Set<number>>(new Set());
   const lastFinalTextRef = useRef('');
-  // Raw audio capture (parallel to SpeechRecognition).
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const audioStartedAtRef = useRef<number>(0);
-  const canCaptureAudio = Boolean(sessionId && questionId && onAudioUploaded);
 
   onChangeRef.current = onChange;
-  onAudioUploadedRef.current = onAudioUploaded;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -80,6 +61,8 @@ export function VoiceTextarea({
           if (!emittedFinalsRef.current.has(i)) {
             emittedFinalsRef.current.add(i);
             let chunk = String(result[0].transcript || '').trim();
+            // Defensive: if a new final extends the previous final (Android
+            // Chrome cumulative bug), emit only the new tail.
             const prev = lastFinalTextRef.current;
             if (prev && chunk.startsWith(prev)) {
               chunk = chunk.slice(prev.length).trim();
@@ -110,20 +93,17 @@ export function VoiceTextarea({
         setError('Mic permission denied. Browser settings mein allow karo.');
         shouldKeepListeningRef.current = false;
         setListening(false);
-        stopAudioCapture(true);
         return;
       }
       if (code === 'network') {
         setError('Network error — internet check karo.');
         shouldKeepListeningRef.current = false;
         setListening(false);
-        stopAudioCapture(true);
         return;
       }
       setError(`Mic error: ${code}`);
       shouldKeepListeningRef.current = false;
       setListening(false);
-      stopAudioCapture(true);
     };
 
     recognition.onend = () => {
@@ -141,135 +121,45 @@ export function VoiceTextarea({
               } catch {
                 shouldKeepListeningRef.current = false;
                 setListening(false);
-                stopAudioCapture();
               }
             }
           }, 120);
         }
       } else {
         setListening(false);
-        stopAudioCapture();
       }
     };
 
     recognitionRef.current = recognition;
     return () => {
       shouldKeepListeningRef.current = false;
-      try { recognition.abort(); } catch {}
-      stopAudioCapture(true);
+      try {
+        recognition.abort();
+      } catch {}
     };
   }, [lang]);
 
-  function stopAudioCapture(discard = false) {
-    const mr = mediaRecorderRef.current;
-    if (mr && mr.state !== 'inactive') {
-      try {
-        // If we want to discard, swap onstop to a no-op first
-        if (discard) {
-          mr.onstop = null;
-          audioChunksRef.current = [];
-        }
-        mr.stop();
-      } catch {}
-    }
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-      mediaStreamRef.current = null;
-    }
-    mediaRecorderRef.current = null;
-  }
-
-  async function startAudioCapture(): Promise<boolean> {
-    if (!canCaptureAudio) return false;
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return false;
-    if (typeof window === 'undefined' || typeof window.MediaRecorder === 'undefined') return false;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-      const mimeType = pickMimeType();
-      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      audioChunksRef.current = [];
-      mr.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-      mr.onstop = async () => {
-        const chunks = audioChunksRef.current;
-        audioChunksRef.current = [];
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-          mediaStreamRef.current = null;
-        }
-        if (chunks.length === 0) return;
-        const blob = new Blob(chunks, { type: chunks[0].type || 'audio/webm' });
-        if (blob.size < 1024) return; // skip tiny/empty recordings
-        const duration = Math.max(1, Math.round((Date.now() - audioStartedAtRef.current) / 1000));
-        await uploadAudio(blob, duration);
-      };
-      mediaRecorderRef.current = mr;
-      audioStartedAtRef.current = Date.now();
-      mr.start();
-      return true;
-    } catch (e) {
-      // Mic may already be held by SpeechRecognition on some browsers; fail
-      // silently — the live transcript still works, just no audio capture.
-      console.warn('[voice] audio capture unavailable:', e);
-      return false;
-    }
-  }
-
-  async function uploadAudio(blob: Blob, durationSeconds: number) {
-    if (!sessionId || !questionId) return;
-    setUploadingAudio(true);
-    try {
-      const form = new FormData();
-      form.append('file', blob, `transcript.${guessExt(blob.type)}`);
-      form.append('sessionId', sessionId);
-      form.append('questionId', questionId);
-      form.append('durationSeconds', String(durationSeconds));
-      const res = await fetch('/api/audio', { method: 'POST', body: form });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Upload failed');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      const url = `${supabaseUrl}/storage/v1/object/public/interview-audio/${json.path}`;
-      onAudioUploadedRef.current?.(json.path, durationSeconds, url);
-    } catch (e: any) {
-      console.warn('[voice] audio upload failed:', e?.message || e);
-    } finally {
-      setUploadingAudio(false);
-    }
-  }
-
-  const start = useCallback(async () => {
+  const start = useCallback(() => {
     if (!recognitionRef.current) return;
     setError(null);
     emittedFinalsRef.current = new Set();
     lastFinalTextRef.current = '';
     shouldKeepListeningRef.current = true;
-    // Start audio capture FIRST (gets fresh mic permission, then starts MR).
-    // SpeechRecognition uses its own mic pathway on most browsers, so the two
-    // can run in parallel. If audio capture fails, transcript still works.
-    if (canCaptureAudio) {
-      await startAudioCapture();
-    }
     try {
       recognitionRef.current.start();
       setListening(true);
     } catch {
       setListening(true);
     }
-  }, [canCaptureAudio]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const stop = useCallback(() => {
     shouldKeepListeningRef.current = false;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch {}
-    }
+    if (!recognitionRef.current) return;
+    try {
+      recognitionRef.current.stop();
+    } catch {}
     setListening(false);
-    // MediaRecorder will fire its onstop and upload the captured audio
-    const mr = mediaRecorderRef.current;
-    if (mr && mr.state !== 'inactive') {
-      try { mr.stop(); } catch {}
-    }
   }, []);
 
   return (
@@ -303,13 +193,7 @@ export function VoiceTextarea({
             <span>{listening ? 'Stop (Bandh karo)' : 'Bolo (Speak)'}</span>
           </button>
           <span className="muted small voice-lang">
-            {listening
-              ? 'Pause kar sakte ho — fir bolo, mic chalu rahega'
-              : uploadingAudio
-                ? 'Audio upload ho raha hai...'
-                : canCaptureAudio
-                  ? `Text + audio • ${lang}`
-                  : `Hindi/Hinglish • ${lang}`}
+            {listening ? 'Pause kar sakte ho — fir bolo, mic chalu rahega' : `Hindi/Hinglish • ${lang}`}
           </span>
         </div>
       )}
@@ -344,28 +228,4 @@ function MicIcon() {
       <line x1="8" y1="22" x2="16" y2="22" />
     </svg>
   );
-}
-
-function pickMimeType(): string {
-  if (typeof MediaRecorder === 'undefined') return '';
-  const candidates = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/ogg;codecs=opus',
-    'audio/mp4',
-  ];
-  for (const m of candidates) {
-    try {
-      if (MediaRecorder.isTypeSupported(m)) return m;
-    } catch {}
-  }
-  return '';
-}
-
-function guessExt(mime: string): string {
-  if (!mime) return 'webm';
-  if (mime.includes('webm')) return 'webm';
-  if (mime.includes('ogg')) return 'ogg';
-  if (mime.includes('mp4') || mime.includes('m4a')) return 'm4a';
-  return 'webm';
 }
