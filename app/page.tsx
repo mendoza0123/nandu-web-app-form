@@ -239,18 +239,19 @@ export default function Page() {
       <main className="container">
         <section className="hero">
           <div className="card grid" style={{ gap: 18 }}>
-            <span className="pill">LD Brain • Supabase • Vercel • LLM</span>
-            <h1 className="h1">Nandu Web App Form</h1>
-            <p className="muted" style={{ lineHeight: 1.7 }}>
-              A high-tech interview system for Nandu Bhai. It captures answers one by one in Hinglish (type or speak),
-              stores them in Supabase, and uses an LLM to generate summaries and SOP-ready knowledge.
+            <span className="pill">LD Brain · Factory Knowledge Capture</span>
+            <h1 className="h1">Nandu Bhai Interview</h1>
+            <p className="muted" style={{ lineHeight: 1.7, fontSize: '1.05rem' }}>
+              Ek aasan form jo ek-ek sawaal poochta hai. Type karo ya mic dabake bolo —
+              Hindi/English mix bhi chalega. Beech mein ruk sakte ho, baad mein wahi se shuru
+              hoga. Last mein ek summary banegi jo LD Brain mein save ho jaayegi.
             </p>
             <div className="grid-2">
-              <div className="card" style={{ background: 'rgba(37,99,235,0.10)' }}>
+              <div className="card" style={{ background: 'var(--accent-soft)', borderColor: 'var(--accent-line)' }}>
                 <strong>Voice-first capture</strong>
                 <p className="muted small">Bolo, mat type karo. Hindi/English mix bhi chalega.</p>
               </div>
-              <div className="card" style={{ background: 'rgba(124,58,237,0.10)' }}>
+              <div className="card" style={{ background: 'var(--warm-soft)', borderColor: '#f0d6a8' }}>
                 <strong>Resume anytime</strong>
                 <p className="muted small">Beech mein band karoge to wahi se shuru hoga (same device).</p>
               </div>
@@ -259,7 +260,7 @@ export default function Page() {
 
           <div className="card grid" style={{ gap: 16 }}>
             {resumeChecked && resumeOption ? (
-              <div className="card" style={{ background: 'rgba(6,182,212,0.10)', border: '1px solid rgba(34,211,238,0.35)' }}>
+              <div className="card" style={{ background: 'var(--accent-soft)', borderColor: 'var(--accent-line)' }}>
                 <h2 className="h2" style={{ marginBottom: 8 }}>Pichla session mila</h2>
                 <p className="muted small" style={{ marginTop: 0 }}>
                   {resumeOption.respondentName ? `${resumeOption.respondentName} — ` : ''}
@@ -443,10 +444,10 @@ export default function Page() {
           </div>
 
           {completion ? (
-            <div className="card" style={{ background: 'rgba(6,182,212,0.08)' }}>
+            <div className="card" style={{ background: 'var(--accent-soft)', borderColor: 'var(--accent-line)' }}>
               <h3 style={{ marginTop: 0 }}>LLM Summary</h3>
               <p className="small muted">Model: {completion.model || 'unknown'}</p>
-              <pre style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, margin: 0 }}>{completion.summary}</pre>
+              <pre style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, margin: 0, fontFamily: 'inherit', fontSize: '0.95rem' }}>{completion.summary}</pre>
               {sessionId ? (
                 <a
                   className="btn"
