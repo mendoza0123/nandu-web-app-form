@@ -25,7 +25,7 @@ const LANG_KEY = 'nandu_prompt_lang';
 // Bumped whenever lib/questions.ts changes shape/content in a way that
 // invalidates stored sessions. Stale sessions on a previous schema are
 // abandoned (the rows stay in Supabase but the UI starts fresh).
-const QUESTION_SET_VERSION = 'v2';
+const QUESTION_SET_VERSION = 'v3';
 const QUESTION_SET_VERSION_KEY = 'nandu_question_set_version';
 
 export default function Page() {
@@ -169,11 +169,12 @@ export default function Page() {
     setBusy(true);
     setStatus('Saving answer...');
     try {
-      // For MCQ-style radio questions, append the optional Notes / अन्य
-      // textarea to the saved answer so it reaches the DB and Sheets.
+      // For MCQ questions (radio or checkbox), append the optional
+      // Notes / अन्य write-in so it reaches the DB and Sheets as part of
+      // the same answer row.
       const trimmedNotes = notesValue.trim();
       let combinedAnswer: string | string[] = answer;
-      if (current.type === 'radio' && current.allowNotes && trimmedNotes) {
+      if ((current.type === 'radio' || current.type === 'checkbox') && current.allowNotes && trimmedNotes) {
         const base = Array.isArray(answer) ? answer.join(' | ') : String(answer);
         combinedAnswer = base ? `${base} | Notes: ${trimmedNotes}` : `Notes: ${trimmedNotes}`;
       }
@@ -303,11 +304,14 @@ export default function Page() {
   }
 
   const displayAnswer = current?.type === 'checkbox' ? multiValue : textValue;
-  const canContinue = current
-    ? current.type === 'checkbox'
-      ? multiValue.length > 0
-      : textValue.trim().length > 0
-    : false;
+  const hasOptionAnswer = current?.type === 'checkbox'
+    ? multiValue.length > 0
+    : textValue.trim().length > 0;
+  const hasNotesAnswer = current?.allowNotes ? notesValue.trim().length > 0 : false;
+  // Allow Save & Continue if the user has either picked option(s) OR written
+  // something in the Notes / अन्य field. This matches the PDF's design where
+  // "अन्य" is itself a valid answer when none of A/B/C/D fit.
+  const canContinue = current ? (hasOptionAnswer || hasNotesAnswer) : false;
 
   return (
     <main className="container grid" style={{ gap: 18 }}>
@@ -397,6 +401,15 @@ export default function Page() {
                   </label>
                 );
               })}
+              {current.allowNotes ? (
+                <textarea
+                  className="textarea notes-textarea"
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  placeholder={lang === 'hi' ? 'अन्य / Notes (optional)' : 'Notes / अन्य (optional)'}
+                  disabled={busy}
+                />
+              ) : null}
             </div>
           ) : null}
 
