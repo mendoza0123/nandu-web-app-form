@@ -65,9 +65,25 @@ export default function Page() {
     const storedLang = window.localStorage.getItem(LANG_KEY);
     if (storedLang === 'hi' || storedLang === 'en') setLang(storedLang);
 
-    // One-time wipe: when the question set schema changes (v1 -> v2 with the
-    // 35 MCQ PDF set), abandon stored sessions from the old schema so resume
-    // doesn't drop the user into a misaligned index.
+    // Admin-triggered recovery: a link like /?resume=<sessionId> forces the
+    // app to pick up that specific session, overriding whatever is already
+    // in localStorage. Useful when Nandu's browser data was cleared OR he
+    // opened the link on a different phone — admin sends him a recovery URL
+    // from /admin and the next page load picks up his real in-progress row.
+    const url = new URL(window.location.href);
+    const resumeOverride = url.searchParams.get('resume');
+    if (resumeOverride) {
+      window.localStorage.setItem(STORAGE_KEY, resumeOverride);
+      window.localStorage.setItem(QUESTION_SET_VERSION_KEY, QUESTION_SET_VERSION);
+      // Clean the URL so a refresh doesn't keep retriggering the override.
+      url.searchParams.delete('resume');
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+    }
+
+    // One-time wipe: when the question set schema changes (e.g. v2 -> v3),
+    // abandon stored sessions from the old schema so resume doesn't drop
+    // the user into a misaligned index. The `?resume=` override above
+    // already set the version key, so admin-recovered sessions survive.
     const storedVersion = window.localStorage.getItem(QUESTION_SET_VERSION_KEY);
     if (storedVersion !== QUESTION_SET_VERSION) {
       window.localStorage.removeItem(STORAGE_KEY);
