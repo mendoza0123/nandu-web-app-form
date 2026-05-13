@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { syncUnsentAnswersToSheets } from '@/lib/sheets';
 
 export async function POST(req: Request) {
   try {
@@ -33,6 +34,12 @@ export async function POST(req: Request) {
       .single();
 
     if (error) throw error;
+
+    // Fire-and-forget: if there are now >= 5 unsent answers for this session,
+    // batch them to Sheets. Never blocks the user's Save & Continue.
+    syncUnsentAnswersToSheets({ sessionId, trigger: 'partial' }).catch((err) =>
+      console.error('[answers] partial sync failed:', err),
+    );
 
     return NextResponse.json({ ok: true, id: data.id });
   } catch (error: any) {
