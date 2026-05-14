@@ -1,6 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { QUESTION_SETS } from '@/lib/questions';
+import { CODED_ROLES } from '@/lib/roles';
+
+// Precomputed per-role section maps so section progress is cheap to render
+// for every row on every refresh. Built once at module load — admin page is
+// the only consumer of QUESTION_SETS on the client, so bundle impact is
+// scoped to /admin.
+const SECTION_COUNTS: Record<string, Record<string, number>> = {};
+const SECTION_ORDER: Record<string, string[]> = {};
+const QUESTION_TO_SECTION: Record<string, Record<string, string>> = {};
+for (const [roleKey, questions] of Object.entries(QUESTION_SETS)) {
+  const counts: Record<string, number> = {};
+  const order: string[] = [];
+  const map: Record<string, string> = {};
+  for (const q of questions) {
+    counts[q.section] = (counts[q.section] || 0) + 1;
+    if (!order.includes(q.section)) order.push(q.section);
+    map[q.id] = q.section;
+  }
+  SECTION_COUNTS[roleKey] = counts;
+  SECTION_ORDER[roleKey] = order;
+  QUESTION_TO_SECTION[roleKey] = map;
+}
 
 type Session = {
   id: string;
@@ -13,6 +36,7 @@ type Session = {
   answeredCount: number;
   totalQuestions: number | null;
   lastAnswerAt: string | null;
+  questionIds: string[];
 };
 
 type AnswerRow = {
@@ -49,6 +73,9 @@ export default function AdminPage() {
   const [origin, setOrigin] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, SessionDetail | undefined>>({});
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [regenerating, setRegenerating] = useState<Record<string, boolean>>({});
 
   // Read ?key= from URL on first load + remember origin for resume URL
   useEffect(() => {
@@ -124,6 +151,38 @@ export default function AdminPage() {
     }
   }
 
+  async function regenerateSummary(sessionId: string) {
+    setRegenerating((prev) => ({ ...prev, [sessionId]: true }));
+    try {
+      const useKey = key.trim();
+      const res = await fetch(`/api/admin/sessions/${sessionId}/summarize?key=${encodeURIComponent(useKey)}`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to regenerate');
+      // Update the expanded detail in place so the new summary shows immediately
+      setExpanded((prev) => {
+        const cur = prev[sessionId];
+        if (!cur) return prev;
+        return {
+          ...prev,
+          [sessionId]: {
+            ...cur,
+            summary: { summary_text: json.summary, llm_model: json.model },
+          },
+        };
+      });
+    } catch (e: any) {
+      setError(e?.message || 'Regenerate failed');
+    } finally {
+      setRegenerating((prev) => {
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
+    }
+  }
+
   async function toggleAnswers(sessionId: string) {
     const cur = expanded[sessionId];
     if (cur && !cur.loading && !cur.error) {
@@ -158,6 +217,46 @@ export default function AdminPage() {
     if (!path) return null;
     return `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/interview-audio/${path}`;
   }
+
+  // Per-role counts for the filter chip row, recomputed when sessions
+  // change. Kept ordered with the coded-roles order first (matches the
+  // landing-chooser order users would expect) then anything else.
+  const roleCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of sessions) {
+      counts[s.role] = (counts[s.role] || 0) + 1;
+    }
+    return counts;
+  }, [sessions]);
+
+  const orderedRoles = useMemo(() => {
+    const codedKeys = Object.keys(CODED_ROLES);
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const k of codedKeys) {
+      if (roleCounts[k] !== undefined) {
+        out.push(k);
+        seen.add(k);
+      }
+    }
+    for (const k of Object.keys(roleCounts)) {
+      if (!seen.has(k)) out.push(k);
+    }
+    return out;
+  }, [roleCounts]);
+
+  const filteredSessions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return sessions.filter((s) => {
+      if (roleFilter && s.role !== roleFilter) return false;
+      if (q) {
+        const name = (s.respondent_name || '').toLowerCase();
+        const role = (s.role || '').toLowerCase();
+        if (!name.includes(q) && !role.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [sessions, roleFilter, query]);
 
   if (!authed) {
     return (
@@ -212,11 +311,45 @@ export default function AdminPage() {
         {error ? <p className="voice-error" style={{ margin: 0 }}>{error}</p> : null}
       </div>
 
-      <div className="card grid" style={{ gap: 12 }}>
-        {sessions.length === 0 ? (
-          <p className="muted">No sessions yet.</p>
+      <div className="card grid" style={{ gap: 14 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+          <FilterChip
+            label={`All (${sessions.length})`}
+            active={roleFilter === null}
+            onClick={() => setRoleFilter(null)}
+          />
+          {orderedRoles.map((roleKey) => {
+            const meta = CODED_ROLES[roleKey];
+            const label = meta?.label || roleKey;
+            return (
+              <FilterChip
+                key={roleKey}
+                label={`${label} (${roleCounts[roleKey]})`}
+                active={roleFilter === roleKey}
+                onClick={() => setRoleFilter(roleKey)}
+              />
+            );
+          })}
+          <div style={{ marginLeft: 'auto', minWidth: 220, flex: 1, maxWidth: 360 }}>
+            <input
+              className="input"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by respondent name…"
+              style={{ padding: '10px 14px' }}
+            />
+          </div>
+        </div>
+
+        {filteredSessions.length === 0 ? (
+          <p className="muted">
+            {sessions.length === 0
+              ? 'No sessions yet.'
+              : 'No sessions match the current filter.'}
+          </p>
         ) : (
-          sessions.map((s) => (
+          filteredSessions.map((s) => (
             <SessionRow
               key={s.id}
               session={s}
@@ -226,6 +359,8 @@ export default function AdminPage() {
               detail={expanded[s.id]}
               onToggleAnswers={toggleAnswers}
               onDelete={deleteSession}
+              onRegenerate={regenerateSummary}
+              regenerating={Boolean(regenerating[s.id])}
               audioUrl={audioUrl}
             />
           ))
@@ -262,6 +397,8 @@ function SessionRow({
   detail,
   onToggleAnswers,
   onDelete,
+  onRegenerate,
+  regenerating,
   audioUrl,
 }: {
   session: Session;
@@ -271,6 +408,8 @@ function SessionRow({
   detail: SessionDetail | undefined;
   onToggleAnswers: (id: string) => void;
   onDelete: (id: string, label: string) => void;
+  onRegenerate: (id: string) => void;
+  regenerating: boolean;
   audioUrl: (path: string | null) => string | null;
 }) {
   const pct = session.totalQuestions ? Math.round((session.answeredCount / session.totalQuestions) * 100) : 0;
@@ -326,6 +465,7 @@ function SessionRow({
         <span>Started: {fmt(session.started_at)}</span>
         {session.lastAnswerAt ? <span>Last answer: {fmt(session.lastAnswerAt)} ({timeAgo(session.lastAnswerAt)})</span> : <span>No answers yet</span>}
         {isCompleted && session.completed_at ? <span>Completed: {fmt(session.completed_at)}</span> : null}
+        <span>Active duration: {durationLabel(session.started_at, session.completed_at || session.lastAnswerAt)}</span>
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -367,6 +507,11 @@ function SessionRow({
             <p className="voice-error" style={{ margin: 0 }}>{detail.error}</p>
           ) : (
             <>
+              <SectionProgress
+                role={session.role}
+                answeredIds={session.questionIds || []}
+              />
+
               {detail.summary?.summary_text ? (
                 <div
                   style={{
@@ -376,12 +521,52 @@ function SessionRow({
                     border: '1px solid var(--accent-line)',
                   }}
                 >
-                  <div className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, marginBottom: 6 }}>
-                    LLM Summary
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                    <div className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                      LLM Summary
+                      {detail.summary.llm_model ? <span style={{ marginLeft: 6, textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>· {detail.summary.llm_model}</span> : null}
+                    </div>
+                    <button
+                      className="btn secondary"
+                      onClick={() => onRegenerate(session.id)}
+                      disabled={regenerating}
+                      style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                    >
+                      {regenerating ? 'Regenerating…' : 'Regenerate'}
+                    </button>
                   </div>
                   <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit', fontSize: '0.92rem', lineHeight: 1.55 }}>
                     {detail.summary.summary_text}
                   </pre>
+                </div>
+              ) : isCompleted && session.answeredCount > 0 ? (
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    background: 'var(--warm-soft)',
+                    border: '1px solid #f0d6a8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600 }}>Summary missing</div>
+                    <div className="muted small" style={{ marginTop: 2 }}>
+                      Background job may have failed (free-tier 429s happen). Re-run the LLM call here.
+                    </div>
+                  </div>
+                  <button
+                    className="btn"
+                    onClick={() => onRegenerate(session.id)}
+                    disabled={regenerating}
+                    style={{ padding: '8px 16px' }}
+                  >
+                    {regenerating ? 'Generating…' : 'Generate summary'}
+                  </button>
                 </div>
               ) : null}
 
@@ -493,6 +678,112 @@ function StatusPill({ status }: { status: string }) {
       {status}
     </span>
   );
+}
+
+function FilterChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        cursor: 'pointer',
+        padding: '6px 14px',
+        borderRadius: 999,
+        border: `1px solid ${active ? 'var(--accent)' : 'var(--border-strong)'}`,
+        background: active ? 'var(--accent)' : 'var(--surface)',
+        color: active ? 'var(--text-inverse)' : 'var(--text)',
+        fontSize: '0.85rem',
+        fontWeight: 600,
+        letterSpacing: '0.02em',
+        transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SectionProgress({
+  role,
+  answeredIds,
+}: {
+  role: string;
+  answeredIds: string[];
+}) {
+  const totals = SECTION_COUNTS[role];
+  const order = SECTION_ORDER[role];
+  const map = QUESTION_TO_SECTION[role];
+  if (!totals || !order || !map) return null;
+
+  const answeredBySection: Record<string, number> = {};
+  for (const qid of answeredIds) {
+    const sec = map[qid];
+    if (sec) answeredBySection[sec] = (answeredBySection[sec] || 0) + 1;
+  }
+
+  return (
+    <div
+      style={{
+        padding: 12,
+        borderRadius: 10,
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+      }}
+    >
+      <div className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600, marginBottom: 8 }}>
+        Section progress
+      </div>
+      <div style={{ display: 'grid', gap: 6 }}>
+        {order.map((section) => {
+          const answered = answeredBySection[section] || 0;
+          const total = totals[section] || 0;
+          const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
+          const done = total > 0 && answered === total;
+          return (
+            <div
+              key={section}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.88rem' }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {section}
+                  </span>
+                  <span className="muted" style={{ fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                    {answered}/{total}
+                    {done ? ' ✓' : ''}
+                  </span>
+                </div>
+                <div className="progress" style={{ height: 5, marginTop: 4 }}>
+                  <div style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function durationLabel(startedAt: string, endAt: string | null): string {
+  if (!endAt) return '—';
+  const ms = new Date(endAt).getTime() - new Date(startedAt).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return '—';
+  if (ms < 60_000) return '<1 min';
+  const totalMin = Math.floor(ms / 60_000);
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  if (hours === 0) return `${mins} min`;
+  return `${hours}h ${mins}m`;
 }
 
 function fmt(iso: string): string {
