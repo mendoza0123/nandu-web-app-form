@@ -76,6 +76,12 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [regenerating, setRegenerating] = useState<Record<string, boolean>>({});
+  const [askOpen, setAskOpen] = useState(false);
+  const [askQuestion, setAskQuestion] = useState('');
+  const [askLoading, setAskLoading] = useState(false);
+  const [askAnswer, setAskAnswer] = useState<{ answer: string; model: string; sourceCount: number } | null>(null);
+  const [askError, setAskError] = useState<string | null>(null);
+  const [sopState, setSopState] = useState<{ sessionId: string; loading: boolean; markdown: string | null; filename: string | null; suggestedPath: string | null; topic: string; model: string | null; error: string | null } | null>(null);
 
   // Read ?key= from URL on first load + remember origin for resume URL
   useEffect(() => {
@@ -148,6 +154,76 @@ export default function AdminPage() {
       });
     } catch (e: any) {
       setError(e?.message || 'Delete failed');
+    }
+  }
+
+  function openSopModal(sessionId: string) {
+    setSopState({ sessionId, loading: false, markdown: null, filename: null, suggestedPath: null, topic: '', model: null, error: null });
+  }
+
+  function closeSopModal() {
+    setSopState(null);
+  }
+
+  async function generateSop(sessionId: string, topic: string) {
+    setSopState((prev) => prev && prev.sessionId === sessionId ? { ...prev, loading: true, error: null } : prev);
+    try {
+      const useKey = key.trim();
+      const res = await fetch(`/api/admin/sessions/${sessionId}/sop?key=${encodeURIComponent(useKey)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: topic.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'SOP failed');
+      setSopState((prev) => prev && prev.sessionId === sessionId ? {
+        ...prev,
+        loading: false,
+        markdown: json.markdown,
+        filename: json.filename,
+        suggestedPath: json.suggestedPath,
+        model: json.model,
+        topic: json.topic || topic,
+        error: null,
+      } : prev);
+    } catch (e: any) {
+      setSopState((prev) => prev && prev.sessionId === sessionId ? { ...prev, loading: false, error: e?.message || 'Failed' } : prev);
+    }
+  }
+
+  function downloadSop() {
+    if (!sopState?.markdown || !sopState?.filename) return;
+    const blob = new Blob([sopState.markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = sopState.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async function submitAskQuestion() {
+    const q = askQuestion.trim();
+    if (!q || askLoading) return;
+    setAskLoading(true);
+    setAskError(null);
+    setAskAnswer(null);
+    try {
+      const useKey = key.trim();
+      const res = await fetch(`/api/admin/ask?key=${encodeURIComponent(useKey)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Ask failed');
+      setAskAnswer({ answer: json.answer, model: json.model, sourceCount: json.sourceCount });
+    } catch (e: any) {
+      setAskError(e?.message || 'Ask failed');
+    } finally {
+      setAskLoading(false);
     }
   }
 
@@ -291,6 +367,14 @@ export default function AdminPage() {
 
   return (
     <main className="container grid" style={{ gap: 18 }}>
+      {sopState ? (
+        <SopModal
+          state={sopState}
+          onGenerate={generateSop}
+          onDownload={downloadSop}
+          onClose={closeSopModal}
+        />
+      ) : null}
       <div className="card grid" style={{ gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <span className="pill">LD Brain · Admin</span>
@@ -309,6 +393,65 @@ export default function AdminPage() {
           </div>
         ) : null}
         {error ? <p className="voice-error" style={{ margin: 0 }}>{error}</p> : null}
+      </div>
+
+      <div className="card grid" style={{ gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <strong style={{ fontSize: '1.05rem' }}>Ask LD Brain</strong>
+            <p className="muted small" style={{ margin: '2px 0 0' }}>
+              Query everything Nandu / Gaurav / etc. have answered so far.
+            </p>
+          </div>
+          <button className="btn secondary" onClick={() => setAskOpen((v) => !v)}>
+            {askOpen ? 'Close' : 'Open'}
+          </button>
+        </div>
+        {askOpen ? (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <textarea
+              className="textarea"
+              value={askQuestion}
+              onChange={(e) => setAskQuestion(e.target.value)}
+              placeholder="e.g. What does Nandu do when Banding appears? OR Who supplies Korean paper? OR Which sections of the form does Nandu skip most?"
+              style={{ minHeight: 70 }}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submitAskQuestion();
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span className="muted small">Tip: Cmd/Ctrl + Enter to send</span>
+              <button
+                className="btn"
+                onClick={submitAskQuestion}
+                disabled={askLoading || !askQuestion.trim()}
+                style={{ minWidth: 140 }}
+              >
+                {askLoading ? 'Asking…' : 'Ask'}
+              </button>
+            </div>
+            {askError ? <p className="voice-error" style={{ margin: 0 }}>{askError}</p> : null}
+            {askAnswer ? (
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 12,
+                  background: 'var(--accent-soft)',
+                  border: '1px solid var(--accent-line)',
+                  display: 'grid',
+                  gap: 8,
+                }}
+              >
+                <div className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                  Answer · {askAnswer.model} · {askAnswer.sourceCount} session{askAnswer.sourceCount === 1 ? '' : 's'} in context
+                </div>
+                <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit', fontSize: '0.95rem', lineHeight: 1.55 }}>
+                  {askAnswer.answer}
+                </pre>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="card grid" style={{ gap: 14 }}>
@@ -361,6 +504,7 @@ export default function AdminPage() {
               onDelete={deleteSession}
               onRegenerate={regenerateSummary}
               regenerating={Boolean(regenerating[s.id])}
+              onOpenSop={openSopModal}
               audioUrl={audioUrl}
             />
           ))
@@ -399,6 +543,7 @@ function SessionRow({
   onDelete,
   onRegenerate,
   regenerating,
+  onOpenSop,
   audioUrl,
 }: {
   session: Session;
@@ -410,6 +555,7 @@ function SessionRow({
   onDelete: (id: string, label: string) => void;
   onRegenerate: (id: string) => void;
   regenerating: boolean;
+  onOpenSop: (id: string) => void;
   audioUrl: (path: string | null) => string | null;
 }) {
   const pct = session.totalQuestions ? Math.round((session.answeredCount / session.totalQuestions) * 100) : 0;
@@ -486,6 +632,11 @@ function SessionRow({
           <a className="btn secondary" href={exportUrl} download>
             Download .md
           </a>
+        ) : null}
+        {session.answeredCount > 0 ? (
+          <button className="btn secondary" onClick={() => onOpenSop(session.id)}>
+            Generate SOP
+          </button>
         ) : null}
       </div>
 
@@ -677,6 +828,117 @@ function StatusPill({ status }: { status: string }) {
     <span className="pill" style={{ background: 'var(--surface-2)', color: 'var(--text-2)', borderColor: 'var(--border)' }}>
       {status}
     </span>
+  );
+}
+
+function SopModal({
+  state,
+  onGenerate,
+  onDownload,
+  onClose,
+}: {
+  state: {
+    sessionId: string;
+    loading: boolean;
+    markdown: string | null;
+    filename: string | null;
+    suggestedPath: string | null;
+    topic: string;
+    model: string | null;
+    error: string | null;
+  };
+  onGenerate: (sessionId: string, topic: string) => void;
+  onDownload: () => void;
+  onClose: () => void;
+}) {
+  const [topic, setTopic] = useState(state.topic || '');
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  async function copyToClipboard() {
+    if (!state.markdown) return;
+    try {
+      await navigator.clipboard.writeText(state.markdown);
+    } catch {}
+  }
+
+  return (
+    <div
+      className="modal-backdrop"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="modal-card"
+        style={{ maxWidth: 780, textAlign: 'left', padding: 24 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+          <h2 className="h2" style={{ margin: 0 }}>Generate SOP</h2>
+          <button className="admin-x" onClick={onClose} aria-label="Close">×</button>
+        </div>
+
+        <p className="muted small" style={{ marginTop: 0 }}>
+          Pick a topic (or leave blank for the strongest auto-picked SOP), then generate. Output is markdown you can paste into <code>LD-Brain-main/&lt;Company&gt;/dynamic/</code>.
+        </p>
+
+        <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', flexWrap: 'wrap', marginBottom: 12 }}>
+          <input
+            className="input"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="e.g. Morning Production Routine · Defect Diagnosis · KATA Process"
+            style={{ flex: 1, minWidth: 240, padding: '10px 14px' }}
+          />
+          <button
+            className="btn"
+            onClick={() => onGenerate(state.sessionId, topic)}
+            disabled={state.loading}
+            style={{ minWidth: 140 }}
+          >
+            {state.loading ? 'Generating…' : state.markdown ? 'Regenerate' : 'Generate'}
+          </button>
+        </div>
+
+        {state.error ? <p className="voice-error" style={{ margin: 0 }}>{state.error}</p> : null}
+
+        {state.markdown ? (
+          <>
+            <div className="muted small" style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+              <span>Topic: {state.topic}{state.model ? ` · ${state.model}` : ''}</span>
+              {state.suggestedPath ? <span>Suggested path: <code>{state.suggestedPath}</code></span> : null}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <button className="btn secondary" onClick={copyToClipboard} style={{ padding: '8px 14px' }}>Copy markdown</button>
+              <button className="btn" onClick={onDownload} style={{ padding: '8px 14px' }}>Download .md</button>
+            </div>
+            <pre
+              style={{
+                whiteSpace: 'pre-wrap',
+                margin: 0,
+                padding: 14,
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 12,
+                maxHeight: 420,
+                overflow: 'auto',
+                fontFamily: 'inherit',
+                fontSize: '0.9rem',
+                lineHeight: 1.55,
+              }}
+            >
+              {state.markdown}
+            </pre>
+          </>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
