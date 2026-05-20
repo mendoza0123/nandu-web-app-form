@@ -24,6 +24,17 @@ export const CODED_ROLES: Record<string, RoleMeta> = {
     description: 'Sales territory, broker relationships, customer churn, ICP, and Cotton sales intelligence for LD Silk Mills.',
     visible: true,
   },
+  laxmikant: {
+    key: 'laxmikant',
+    label: 'Laxmikant Ji',
+    company: 'LD Silk Mills',
+    framing: 'leadership',
+    expectedMinutes: 75,
+    source: 'code',
+    description:
+      'Founder · procurement principal. Mill network, fabric compositions, dead stock postmortems, and pricing instincts for LD Silk Mills.',
+    visible: true,
+  },
   md: {
     key: 'md',
     label: 'MD / Leader',

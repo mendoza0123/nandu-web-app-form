@@ -1111,6 +1111,147 @@ const gaurav: Question[] = [
   },
 ];
 
+// Source: All_Questions_list/LD_Brain_Questionnaire_Laxmikant.pdf
+// 14 open-ended questions across 4 sections — the founder/procurement
+// principal's tacit knowledge of mills, fabrics, dead stock, and pricing.
+// Estimated 60–90 minutes across 2–3 sessions. All textarea — the PDF is
+// interview-guide style, every answer is a paragraph. Voice notes + the
+// live-transcribe mic will carry most of the input.
+const laxmikant: Question[] = [
+  // ─────────────────────────────────────────────
+  // भाग A — मिल नेटवर्क (Mill Network)
+  // ─────────────────────────────────────────────
+  {
+    id: 'A1',
+    section: 'Sec A: Mill Network',
+    sectionHi: 'भाग A: मिल नेटवर्क',
+    prompt: 'Aapke top 10 mills kaun se hain? Har mill ke liye batayein — mill ka naam aur location (Surat / Bhilwara / Mumbai), kitne saal se kaam kar rahe hain, contact person ka naam, unka personal mobile hai ya sirf office number, aur agar kal aap nahi rahein to koi aur LD Silk se ye relationship rebuild kar sakta hai ya nahi.',
+    promptHi: 'आपके top 10 mills कौन से हैं? हर mill के लिए बताइए — mill का नाम और location (Surat / Bhilwara / Mumbai), कितने साल से काम कर रहे हैं, contact person का नाम, उनका personal mobile है या सिर्फ office number, और अगर कल आप नहीं रहें तो कोई और LD Silk से ये relationship rebuild कर सकता है या नहीं।',
+    type: 'textarea',
+    help: 'Naam · Location · Years · Contact person · Personal mobile? · Succession-safe?',
+  },
+  {
+    id: 'A2',
+    section: 'Sec A: Mill Network',
+    sectionHi: 'भाग A: मिल नेटवर्क',
+    prompt: 'Distress sale access — kaun-kaun se mills aapko sabse pehle call karte hain jab unke paas excess ya clearance stock hota hai? Call kaise aati hai — WhatsApp, direct call, ya broker ke through? Ye relationship personal hai (wo aap par trust karte hain) ya transactional (sab ko call karte hain)? Agar aap 2 hafte available na ho, to call LD Silk ko aayegi ya competitor ko?',
+    promptHi: 'Distress sale access — कौन-कौन से mills आपको सबसे पहले call करते हैं जब उनके पास excess या clearance stock होता है? Call कैसे आती है — WhatsApp, direct call, या broker के through? ये relationship personal है (वो आप पर trust करते हैं) या transactional (सब को call करते हैं)? अगर आप 2 हफ्ते available ना हों, तो call LD Silk को आएगी या competitor को?',
+    type: 'textarea',
+    help: 'Mill names · Channel (WhatsApp / call / broker) · Personal vs transactional · 2-week-absence test',
+  },
+  {
+    id: 'A3',
+    section: 'Sec A: Mill Network',
+    sectionHi: 'भाग A: मिल नेटवर्क',
+    prompt: 'Mill succession risk — koi key mill aisi hai jo ownership change, financial stress, ya quality issues se guzar rahi hai? Kahin aapka contact person umar mein bade hain aur jaldi retire ho sakte hain — agle log kaun lenge? Kaunse mills ki quality pichhle 1-2 saal mein gir rahi hai?',
+    promptHi: 'Mill succession risk — कोई key mill ऐसी है जो ownership change, financial stress, या quality issues से गुज़र रही है? कहीं आपका contact person उम्र में बड़े हैं और जल्दी retire हो सकते हैं — अगले लोग कौन लेंगे? कौनसे mills की quality पिछले 1-2 साल में गिर रही है?',
+    type: 'textarea',
+  },
+  {
+    id: 'A4',
+    section: 'Sec A: Mill Network',
+    sectionHi: 'भाग A: मिल नेटवर्क',
+    prompt: 'New mill discovery — pichhle 12 mahine mein koi nayi mills se buying shuru ki hai jo accha perform kar rahi hain? Kuch mills jo aapne pehle reject ki thi — kya wo aaj dobara dekhne layak hain? Aur naya mill evaluate karne ke liye aap kya process follow karte hain?',
+    promptHi: 'New mill discovery — पिछले 12 महीने में कोई नई mills से buying शुरू की है जो अच्छा perform कर रही हैं? कुछ mills जो आपने पहले reject की थी — क्या वो आज दोबारा देखने लायक हैं? और नया mill evaluate करने के लिए आप क्या process follow करते हैं?',
+    type: 'textarea',
+  },
+
+  // ─────────────────────────────────────────────
+  // भाग B — फ़ैब्रिक ज्ञान (Fabric Knowledge)
+  // ─────────────────────────────────────────────
+  {
+    id: 'B1',
+    section: 'Sec B: Fabric Knowledge',
+    sectionHi: 'भाग B: फ़ैब्रिक ज्ञान',
+    prompt: 'Top 30 fabric compositions — SAB system mein 540 mein se 620 fabric qualities ke saath composition "Na" hai. Highest-volume fabrics (jaise London, Innova, Dominoz, Polo) ke liye batayein — kis cheez se bana hai (e.g. "60% Polyester, 35% Viscose, 5% Lycra"), kaunsi width, approximate GSM, aur weave type (plain / twill / dobby / satin). Mahesh aapke saath ek list lekar baithega — har fabric pe 30 second kaafi hai. Yahaan jo bhi yaad hai abhi likh dijiye.',
+    promptHi: 'Top 30 fabric compositions — SAB system में 540 में से 620 fabric qualities के साथ composition "Na" है। Highest-volume fabrics (जैसे London, Innova, Dominoz, Polo) के लिए बताइए — किस चीज़ से बना है (e.g. "60% Polyester, 35% Viscose, 5% Lycra"), कौनसी width, approximate GSM, और weave type (plain / twill / dobby / satin)। Mahesh आपके साथ एक list लेकर बैठेगा — हर fabric पे 30 second काफी है। यहाँ जो भी याद है अभी लिख दीजिए।',
+    type: 'textarea',
+    help: 'Format: Fabric — Composition — Width — GSM — Weave',
+  },
+  {
+    id: 'B2',
+    section: 'Sec B: Fabric Knowledge',
+    sectionHi: 'भाग B: फ़ैब्रिक ज्ञान',
+    prompt: 'Print suitability for Linkd — jo ~50-60 fabrics mein significant polyester hai, unmein se kaunsa digital sublimation printing ke liye Linkd par suitable hai? Aapne kabhi Linkd ya kahin aur unhe print karke try kiya hai — kya result aaya? Aur kaunse fabrics aap recommend karenge jo abhi tak printing substrate ki tarah try nahi kiye, lekin honi chahiye?',
+    promptHi: 'Print suitability for Linkd — जो ~50-60 fabrics में significant polyester है, उनमें से कौनसा digital sublimation printing के लिए Linkd पर suitable है? आपने कभी Linkd या कहीं और उन्हें print करके try किया है — क्या result आया? और कौनसे fabrics आप recommend करेंगे जो अभी तक printing substrate की तरह try नहीं किए, लेकिन होनी चाहिए?',
+    type: 'textarea',
+  },
+  {
+    id: 'B3',
+    section: 'Sec B: Fabric Knowledge',
+    sectionHi: 'भाग B: फ़ैब्रिक ज्ञान',
+    prompt: 'Series-level customer map — kaun customers specifically London khareedte hain? Innova kaun le jaata hai — kya wo London waale se alag log hain? Dominoz kaun? Kuch customers aise hain jo SIRF ek hi fabric family lete hain aur kuch nahi? Aur aise fabrics kahaan hain jahaan ₹5 price hilta hai to customer turant competitor pe chala jaata hai?',
+    promptHi: 'Series-level customer map — कौन customers specifically London खरीदते हैं? Innova कौन ले जाता है — क्या वो London वाले से अलग लोग हैं? Dominoz कौन? कुछ customers ऐसे हैं जो सिर्फ एक ही fabric family लेते हैं और कुछ नहीं? और ऐसे fabrics कहाँ हैं जहाँ ₹5 price हिलता है तो customer तुरंत competitor पे चला जाता है?',
+    type: 'textarea',
+    help: 'London buyers · Innova buyers · Dominoz buyers · Single-family loyalists · Price-sensitive series',
+  },
+
+  // ─────────────────────────────────────────────
+  // भाग C — डेड स्टॉक विश्लेषण (Dead Stock Postmortems)
+  // ─────────────────────────────────────────────
+  {
+    id: 'C1',
+    section: 'Sec C: Dead Stock Postmortems',
+    sectionHi: 'भाग C: डेड स्टॉक विश्लेषण',
+    prompt: 'Titan (5,861 mtrs) — kab last baar khareeda gaya tha, kis customer ke liye? Sell hona kyun ruka — customer ne lena chhod diya, trend khatm, quality issue, ya competition ne kaata? Koi specific event tha jo Titan ki demand maar gaya, ya dheere-dheere fade ho gaya? Aaj sell ho sakta hai — kis customer ko, kis price pe, aur kitna percent recovery?',
+    promptHi: 'Titan (5,861 mtrs) — कब last बार खरीदा गया था, किस customer के लिए? Sell होना क्यों रुका — customer ने लेना छोड़ दिया, trend खत्म, quality issue, या competition ने काटा? कोई specific event था जो Titan की demand मार गया, या धीरे-धीरे fade हो गया? आज sell हो सकता है — किस customer को, किस price पे, और कितना percent recovery?',
+    type: 'textarea',
+  },
+  {
+    id: 'C2',
+    section: 'Sec C: Dead Stock Postmortems',
+    sectionHi: 'भाग C: डेड स्टॉक विश्लेषण',
+    prompt: 'Chip Plain (5,496 mtrs, never sold) — khareeda gaya tha lekin aaj tak ek meter bhi sell nahi hua. Original intent kya tha? Kisi customer ne hint diya tha jo phir follow through nahi kiya, ya speculative buy thi? Purchase kisne approve ki thi? Aaj sahi action kya hai — liquidate, Cotton mein repurpose, ya donate?',
+    promptHi: 'Chip Plain (5,496 mtrs, never sold) — खरीदा गया था लेकिन आज तक एक meter भी sell नहीं हुआ। Original intent क्या था? किसी customer ने hint दिया था जो फिर follow through नहीं किया, या speculative buy थी? Purchase किसने approve की थी? आज सही action क्या है — liquidate, Cotton में repurpose, या donate?',
+    type: 'textarea',
+  },
+  {
+    id: 'C3',
+    section: 'Sec C: Dead Stock Postmortems',
+    sectionHi: 'भाग C: डेड स्टॉक विश्लेषण',
+    prompt: 'Merit Plain (2,903 mtrs, bought Feb 2026, zero sales) — sabse zaroori case kyunki sirf 2 mahine pehle khareeda gaya, ek meter bhi nahi gaya. Jab khareeda tha, intended customer kaun tha? Wo customer ne interest confirm kiya tha purchase se pehle, ya speculative tha? Ab sahi action kya hona chahiye?',
+    promptHi: 'Merit Plain (2,903 mtrs, bought Feb 2026, zero sales) — सबसे ज़रूरी case क्योंकि सिर्फ 2 महीने पहले खरीदा गया, एक meter भी नहीं गया। जब खरीदा था, intended customer कौन था? वो customer ने interest confirm किया था purchase से पहले, या speculative था? अब सही action क्या होना चाहिए?',
+    type: 'textarea',
+  },
+  {
+    id: 'C4',
+    section: 'Sec C: Dead Stock Postmortems',
+    sectionHi: 'भाग C: डेड स्टॉक विश्लेषण',
+    prompt: 'General dead stock rule — aapke experience mein, fabrics ke dead stock banne ka sabse common reason kya hai? Galat trend call, customer-specific buy jo fall through ho gayi, ya price itni high ki move hi nahi hua? Koi pattern hai — kis mill, kis category, kaunse season se zyada dead stock aata hai? Aur naya unproven fabric quality ka first trial mein aap maximum kitna khareedne ko taiyar honge?',
+    promptHi: 'General dead stock rule — आपके experience में, fabrics के dead stock बनने का सबसे common reason क्या है? गलत trend call, customer-specific buy जो fall through हो गई, या price इतनी high कि move ही नहीं हुआ? कोई pattern है — किस mill, किस category, कौनसे season से ज़्यादा dead stock आता है? और नया unproven fabric quality का first trial में आप maximum कितना खरीदने को तैयार होंगे?',
+    type: 'textarea',
+  },
+
+  // ─────────────────────────────────────────────
+  // भाग D — कीमत समझ (Pricing Instincts)
+  // ─────────────────────────────────────────────
+  {
+    id: 'D1',
+    section: 'Sec D: Pricing Instincts',
+    sectionHi: 'भाग D: कीमत समझ',
+    prompt: 'Rate benchmarks by category — naye salesperson ke liye, jo abhi pricing nahi jaanta: Tier 1 finished fabric (London, Innova, Polo-type) ka "never go below" rate kya hai? Tier 4 digital / print fabric (Milano, Canvas-type) ka floor rate kya hai? Aur jab koi mill price quote karta hai, aap kaise pehchanate hain ki ye accha price hai ya bura?',
+    promptHi: 'Rate benchmarks by category — नए salesperson के लिए, जो अभी pricing नहीं जानता: Tier 1 finished fabric (London, Innova, Polo-type) का "never go below" rate क्या है? Tier 4 digital / print fabric (Milano, Canvas-type) का floor rate क्या है? और जब कोई mill price quote करता है, आप कैसे पहचानते हैं कि ये अच्छा price है या बुरा?',
+    type: 'textarea',
+    help: 'Tier 1 floor · Tier 4 floor · Good-vs-bad-quote tells',
+  },
+  {
+    id: 'D2',
+    section: 'Sec D: Pricing Instincts',
+    sectionHi: 'भाग D: कीमत समझ',
+    prompt: 'The "too cheap" warning — kabhi aisa hua ki mill ne aisi price offer ki jo bahut suspicious lagi — bahut sasti? Tab kya hua, aur aap kaise pehchaante hain ki kuch galat hai? Jab fabric expected price se 20% neeche aata hai, iska kya matlab nikalta hai — quality issue, fake, ya distress sale?',
+    promptHi: 'The "too cheap" warning — कभी ऐसा हुआ कि mill ने ऐसी price offer की जो बहुत suspicious लगी — बहुत सस्ती? तब क्या हुआ, और आप कैसे पहचानते हैं कि कुछ गलत है? जब fabric expected price से 20% नीचे आता है, इसका क्या मतलब निकलता है — quality issue, fake, या distress sale?',
+    type: 'textarea',
+  },
+  {
+    id: 'D3',
+    section: 'Sec D: Pricing Instincts',
+    sectionHi: 'भाग D: कीमत समझ',
+    prompt: 'Margin by category — exact numbers nahi, sirf aapka sense: Tier 1 finished, grey-processed, linen, digital — in mein se kaunsi category Silk ko sabse achi margin deti hai? Kis category ki margin sabse patli hai? Kaunsi category aap zyada sell karne mein khush hain, aur kaunsi reduce karna chahenge?',
+    promptHi: 'Margin by category — exact numbers नहीं, सिर्फ आपका sense: Tier 1 finished, grey-processed, linen, digital — इन में से कौनसी category Silk को सबसे अच्छी margin देती है? किस category की margin सबसे पतली है? कौनसी category आप ज़्यादा sell करने में खुश हैं, और कौनसी reduce करना चाहेंगे?',
+    type: 'textarea',
+  },
+];
+
 const md: Question[] = [
   { id: 'M1', section: 'Management Vision', prompt: 'Aaj ke liye top 3 business priorities kya hain?', type: 'textarea' },
   { id: 'M2', section: 'Management Vision', prompt: 'Aap kis cheez par bilkul compromise nahi karna chahte?', type: 'textarea' },
@@ -1127,5 +1268,6 @@ const md: Question[] = [
 export const QUESTION_SETS: Record<InterviewRole, Question[]> = {
   nandu,
   gaurav,
+  laxmikant,
   md,
 };
