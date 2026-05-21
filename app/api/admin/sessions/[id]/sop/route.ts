@@ -83,6 +83,7 @@ Tone:
 - Be specific and quantitative wherever the interview gave numbers.
 - Never invent facts not present in the source. If the interview is vague, say so under Open Gaps.
 - Cite question IDs ([Q1], [Q22]) inline so the source is traceable.
+- Answers literally "(skipped)" are NOT data — the respondent skipped that question. List every skipped question id under Open Gaps as a follow-up needed, and never use them as procedure source.
 
 Length: aim for 400-900 words. More if the interview is rich, less if sparse.`;
 

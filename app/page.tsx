@@ -248,6 +248,64 @@ export default function Page() {
     }
   }
 
+  async function skipAndNext() {
+    if (!current || !sessionId) return;
+    setBusy(true);
+    setStatus('Skipping…');
+    try {
+      const response = await fetch('/api/answers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          questionId: current.id,
+          questionText: current.prompt,
+          section: current.section,
+          answer: '(skipped)',
+          // explicitly NOT attaching audioPath / audioDurationSeconds —
+          // skipping intentionally clears any partial recording so the
+          // row is unambiguously a skip, not a half-finished answer.
+        }),
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json.error || 'Failed to skip');
+      setSavedAnswers((prev) => [
+        ...prev,
+        {
+          questionId: current.id,
+          answer: '(skipped)',
+          audioUrl: null,
+          audioDurationSeconds: null,
+        },
+      ]);
+
+      if (index + 1 >= questions.length) {
+        // Skipping the final question still triggers completion — but the
+        // background LLM will see the skip marker and call it out.
+        setStatus('Finalising…');
+        const done = await fetch('/api/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
+        const doneJson = await done.json();
+        if (!done.ok) throw new Error(doneJson.error || 'Failed to complete session');
+        setCompletion({ thanks: true });
+        setStatus('Session completed');
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(STORAGE_KEY);
+        }
+      } else {
+        setIndex((v) => v + 1);
+        setStatus('Skipped — moved to next');
+      }
+    } catch (err: any) {
+      setStatus(err.message || 'Failed to skip');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function toggleMulti(option: string) {
     setMultiValue((current) =>
       current.includes(option) ? current.filter((item) => item !== option) : [...current, option],
@@ -504,8 +562,11 @@ export default function Page() {
             />
           ) : null}
 
-          <div className="grid-2">
+          <div className="action-row">
             <button className="btn secondary" disabled={busy || index === 0} onClick={() => setIndex((v) => Math.max(0, v - 1))}>Back</button>
+            <button className="btn ghost" disabled={busy} onClick={skipAndNext} title="Skip this question for now — you can come back later via Back">
+              Skip karo (baad mein)
+            </button>
             <button className="btn" disabled={busy || !canContinue} onClick={() => saveAndNext(displayAnswer)}>Save &amp; Continue</button>
           </div>
 

@@ -97,6 +97,7 @@ Rules:
 3. If multiple respondents disagree, surface the disagreement explicitly.
 4. Keep answers concise (3-8 sentences for most questions, bulleted when listing).
 5. Use Hinglish naturally — same flavour as the source data.
+6. Answers literally "(skipped)" mean the respondent skipped that question — not a data point. Don't quote them as evidence. If a skip is relevant to the user's question, say "the respondent skipped this question — follow up needed".
 
 Data:
 ${corpus}`;

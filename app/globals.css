@@ -172,6 +172,24 @@ strong { font-weight: 700; color: var(--text); }
 }
 .btn.secondary:hover:not(:disabled) { background: var(--surface-2); border-color: var(--text-3); }
 
+.btn.ghost {
+  background: transparent;
+  color: var(--text-2);
+  border: 1px dashed var(--border-strong);
+  box-shadow: none;
+  font-weight: 500;
+}
+.btn.ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); border-color: var(--text-3); }
+
+.action-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr);
+}
+@media (max-width: 640px) {
+  .action-row { grid-template-columns: 1fr; }
+}
+
 /* inputs */
 .input, .textarea {
   width: 100%;

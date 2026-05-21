@@ -742,33 +742,54 @@ function AnswerCard({
   audioUrl: (path: string | null) => string | null;
 }) {
   const url = audioUrl(answer.audio_path);
+  const isSkipped = (answer.answer_text || '').trim().toLowerCase().startsWith('(skipped');
   return (
     <div
       style={{
         padding: 12,
         borderRadius: 10,
-        background: 'var(--surface-2)',
-        border: '1px solid var(--border)',
+        background: isSkipped ? 'var(--warm-soft)' : 'var(--surface-2)',
+        border: `1px solid ${isSkipped ? '#f0d6a8' : 'var(--border)'}`,
         display: 'grid',
         gap: 8,
       }}
     >
-      <div className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
-        {answer.question_id} · {answer.section}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+          {answer.question_id} · {answer.section}
+        </div>
+        {isSkipped ? (
+          <span
+            style={{
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              padding: '2px 8px',
+              borderRadius: 999,
+              background: 'var(--warm)',
+              color: 'var(--text-inverse)',
+            }}
+          >
+            Skipped
+          </span>
+        ) : null}
       </div>
       <div style={{ fontWeight: 600, lineHeight: 1.5 }}>{answer.question_text}</div>
       {answer.answer_text ? (
         <div
           style={{
             padding: '8px 12px',
-            borderLeft: '3px solid var(--accent)',
-            background: 'rgba(11, 110, 90, 0.05)',
+            borderLeft: `3px solid ${isSkipped ? 'var(--warm)' : 'var(--accent)'}`,
+            background: isSkipped ? 'rgba(180, 83, 9, 0.06)' : 'rgba(11, 110, 90, 0.05)',
             borderRadius: 6,
             whiteSpace: 'pre-wrap',
             lineHeight: 1.5,
+            fontStyle: isSkipped ? 'italic' : 'normal',
+            color: isSkipped ? 'var(--text-2)' : 'var(--text)',
           }}
         >
-          {answer.answer_text}
+          {isSkipped ? 'Respondent skipped this — follow up needed.' : answer.answer_text}
         </div>
       ) : (
         <em className="muted small">(no text answer)</em>

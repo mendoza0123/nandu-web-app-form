@@ -38,7 +38,7 @@ export async function summarizeInterview(role: InterviewRole, respondentName: st
       {
         role: 'system',
         content:
-          'You are an internal LD Brain analyst. Convert interview answers into a crisp knowledge summary. Output plain text with headings: Executive Summary, Operational Rules, Risks / Gaps, Reusable SOP Notes, and Next Questions. Be concise but specific.',
+          'You are an internal LD Brain analyst. Convert interview answers into a crisp knowledge summary. Output plain text with headings: Executive Summary, Operational Rules, Risks / Gaps, Reusable SOP Notes, and Next Questions. Be concise but specific.\n\nIf an Answer is "(skipped)" — the respondent intentionally moved past that question. Do NOT treat it as data. Instead, list every skipped question under Risks / Gaps as a follow-up to revisit (cite the question id), and exclude it from Operational Rules / SOP Notes.',
       },
       {
         role: 'user',
