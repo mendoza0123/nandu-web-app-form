@@ -47,6 +47,7 @@ type AnswerRow = {
   answer_text: string;
   audio_path: string | null;
   audio_duration_seconds: number | null;
+  audio_transcript: string | null;
   created_at: string;
 };
 
@@ -800,6 +801,25 @@ function AnswerCard({
           {answer.audio_duration_seconds ? (
             <span className="muted small">{answer.audio_duration_seconds}s voice note</span>
           ) : null}
+        </div>
+      ) : null}
+      {answer.audio_transcript && answer.audio_transcript.trim() ? (
+        <div
+          style={{
+            padding: '8px 12px',
+            background: 'rgba(180, 83, 9, 0.05)',
+            border: '1px dashed #f0d6a8',
+            borderRadius: 6,
+            fontSize: '0.88rem',
+            lineHeight: 1.5,
+            color: 'var(--text-2)',
+            fontStyle: 'italic',
+          }}
+        >
+          <span className="muted small" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700, marginRight: 6 }}>
+            Voice transcript (Whisper):
+          </span>
+          {answer.audio_transcript}
         </div>
       ) : null}
     </div>

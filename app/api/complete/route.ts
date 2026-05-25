@@ -47,7 +47,7 @@ export async function POST(req: Request) {
         try {
           const { data: answers, error: answersError } = await supabase
             .from('interview_answers')
-            .select('question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, created_at')
+            .select('question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, audio_transcript, created_at')
             .eq('session_id', sessionId)
             .order('created_at', { ascending: true });
           if (answersError) throw answersError;

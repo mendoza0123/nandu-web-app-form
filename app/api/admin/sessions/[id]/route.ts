@@ -33,7 +33,7 @@ export async function GET(
         .maybeSingle(),
       supabase
         .from('interview_answers')
-        .select('id, question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, created_at')
+        .select('id, question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, audio_transcript, created_at')
         .eq('session_id', id)
         .order('created_at', { ascending: true }),
       supabase

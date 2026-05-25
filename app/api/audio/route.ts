@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { transcribeAudio } from '@/lib/transcribe';
 
 export const runtime = 'nodejs';
-export const maxDuration = 30;
+// Storage upload ~1-2s + Whisper ~3-8s for typical clips. 60s gives
+// comfortable headroom for the 3-min hard cap on a single recording.
+export const maxDuration = 60;
 
 const BUCKET = 'interview-audio';
 const MAX_BYTES = 6 * 1024 * 1024; // 6 MB — 3 min of opus ~ 1.5 MB, generous headroom
@@ -44,10 +47,19 @@ export async function POST(req: Request) {
 
     if (uploadError) throw uploadError;
 
+    // Whisper transcription is best-effort. If it fails, the upload still
+    // succeeded — caller gets the path back and admin can listen manually.
+    const { text: transcript, model: transcribeModel } = await transcribeAudio(
+      arrayBuffer,
+      file.type || 'audio/webm',
+    );
+
     return NextResponse.json({
       ok: true,
       path,
       durationSeconds: Number.isFinite(durationSeconds) ? Math.round(durationSeconds) : null,
+      transcript,
+      transcribeModel,
     });
   } catch (error: any) {
     return NextResponse.json(

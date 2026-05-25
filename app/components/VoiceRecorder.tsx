@@ -9,7 +9,7 @@ type Props = {
   questionId: string;
   audioPath: string | null;
   audioUrl: string | null;
-  onUploaded: (audioPath: string, durationSeconds: number, audioUrl: string) => void;
+  onUploaded: (audioPath: string, durationSeconds: number, audioUrl: string, transcript: string) => void;
   onCleared: () => void;
   disabled?: boolean;
 };
@@ -98,7 +98,8 @@ export function VoiceRecorder({
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
       const url = `${supabaseUrl}/storage/v1/object/public/interview-audio/${json.path}`;
-      onUploaded(json.path, duration, url);
+      const transcript = String(json.transcript || '').trim();
+      onUploaded(json.path, duration, url, transcript);
       setState('saved');
       setElapsed(0);
     } catch (err: any) {
