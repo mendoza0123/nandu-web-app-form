@@ -50,7 +50,7 @@ export async function POST(
 
     const { data: answers, error: answersErr } = await supabase
       .from('interview_answers')
-      .select('question_id, question_text, section, answer_text, audio_transcript, created_at')
+      .select('question_id, question_text, section, answer_text, created_at')
       .eq('session_id', id)
       .order('created_at', { ascending: true });
     if (answersErr) throw answersErr;
@@ -63,12 +63,7 @@ export async function POST(
     const respondent = session.respondent_name || roleMeta?.label || session.role;
 
     const dataDump = answers
-      .map((a) => {
-        const voiceLine = a.audio_transcript && a.audio_transcript.trim()
-          ? `\n   [Voice note transcript: ${a.audio_transcript.trim()}]`
-          : '';
-        return `[${a.question_id}] (${a.section}) ${a.question_text}\nA: ${a.answer_text}${voiceLine}`;
-      })
+      .map((a) => `[${a.question_id}] (${a.section}) ${a.question_text}\nA: ${a.answer_text}`)
       .join('\n\n');
 
     const systemPrompt = `You are a senior operations consultant writing factory SOP (Standard Operating Procedure) documents for LD Group. You convert raw interview transcripts into clean, immediately-useful SOP markdown.
@@ -89,7 +84,6 @@ Tone:
 - Never invent facts not present in the source. If the interview is vague, say so under Open Gaps.
 - Cite question IDs ([Q1], [Q22]) inline so the source is traceable.
 - Answers literally "(skipped)" are NOT data — the respondent skipped that question. List every skipped question id under Open Gaps as a follow-up needed, and never use them as procedure source.
-- Lines starting with "[Voice note transcript: ...]" are the respondent's spoken elaboration on the same question (Whisper transcription) — treat as equal-weight source material alongside the typed Answer. Merge both into the procedure; do not quote the brackets in the SOP output.
 
 Length: aim for 400-900 words. More if the interview is rich, less if sparse.`;
 

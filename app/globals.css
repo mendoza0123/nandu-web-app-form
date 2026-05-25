@@ -399,7 +399,6 @@ strong { font-weight: 700; color: var(--text); }
   animation: voice-blink 1s ease-in-out infinite;
 }
 @keyframes voice-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .voice-error {
   margin: 0;
   padding: 10px 14px;

@@ -44,7 +44,6 @@ export default function Page() {
   const [audioPath, setAudioPath] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | null>(null);
-  const [audioTranscript, setAudioTranscript] = useState<string | null>(null);
   const [notesValue, setNotesValue] = useState('');
   const [lang, setLang] = useState<PromptLang>('en');
 
@@ -58,7 +57,6 @@ export default function Page() {
     setAudioPath(null);
     setAudioUrl(null);
     setAudioDurationSeconds(null);
-    setAudioTranscript(null);
     setNotesValue('');
   }, [index, role]);
 
@@ -208,7 +206,6 @@ export default function Page() {
           answer: combinedAnswer,
           audioPath,
           audioDurationSeconds,
-          audioTranscript,
         }),
       });
       const json = await response.json();
@@ -478,19 +475,7 @@ export default function Page() {
       <div className="question-layout">
         <section className="card grid" style={{ gap: 14 }}>
           {current?.type === 'textarea' || current?.type === 'text' ? (
-            <VoiceTextarea
-              value={textValue}
-              onChange={setTextValue}
-              disabled={busy}
-              sessionId={sessionId}
-              questionId={current.id}
-              onAudioUploaded={(path, durationSeconds, url, transcript) => {
-                setAudioPath(path);
-                setAudioUrl(url);
-                setAudioDurationSeconds(durationSeconds);
-                if (transcript) setAudioTranscript(transcript);
-              }}
-            />
+            <VoiceTextarea value={textValue} onChange={setTextValue} disabled={busy} />
           ) : null}
 
           {current?.type === 'radio' && current.options ? (
@@ -563,17 +548,15 @@ export default function Page() {
               questionId={current.id}
               audioPath={audioPath}
               audioUrl={audioUrl}
-              onUploaded={(path, durationSeconds, url, transcript) => {
+              onUploaded={(path, durationSeconds, url) => {
                 setAudioPath(path);
                 setAudioUrl(url);
                 setAudioDurationSeconds(durationSeconds);
-                if (transcript) setAudioTranscript(transcript);
               }}
               onCleared={() => {
                 setAudioPath(null);
                 setAudioUrl(null);
                 setAudioDurationSeconds(null);
-                setAudioTranscript(null);
               }}
               disabled={busy}
             />

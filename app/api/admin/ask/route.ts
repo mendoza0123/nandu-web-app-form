@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     const sessionIds = sessions.map((s) => s.id);
     const { data: answers, error: answersErr } = await supabase
       .from('interview_answers')
-      .select('session_id, question_id, question_text, section, answer_text, audio_transcript, created_at')
+      .select('session_id, question_id, question_text, section, answer_text, created_at')
       .in('session_id', sessionIds)
       .order('created_at', { ascending: true });
     if (answersErr) throw answersErr;
@@ -83,12 +83,7 @@ export async function POST(req: Request) {
       if (rows.length === 0) continue;
       const header = `### Session — ${s.respondent_name || '(no name)'} · ${s.role} · ${s.status}`;
       const body = rows
-        .map((r) => {
-          const voiceLine = r.audio_transcript && r.audio_transcript.trim()
-            ? `\n   [Voice note transcript: ${r.audio_transcript.trim()}]`
-            : '';
-          return `[${r.question_id}] ${r.question_text}\n→ ${r.answer_text}${voiceLine}`;
-        })
+        .map((r) => `[${r.question_id}] ${r.question_text}\n→ ${r.answer_text}`)
         .join('\n\n');
       blocks.push(`${header}\n${body}`);
     }
@@ -103,7 +98,6 @@ Rules:
 4. Keep answers concise (3-8 sentences for most questions, bulleted when listing).
 5. Use Hinglish naturally — same flavour as the source data.
 6. Answers literally "(skipped)" mean the respondent skipped that question — not a data point. Don't quote them as evidence. If a skip is relevant to the user's question, say "the respondent skipped this question — follow up needed".
-7. Lines starting with "[Voice note transcript: ...]" are the respondent's spoken elaboration on the same question, transcribed by Whisper — treat as equal-weight evidence alongside the typed Answer above. Cite by the same question id.
 
 Data:
 ${corpus}`;

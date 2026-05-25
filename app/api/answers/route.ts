@@ -5,7 +5,7 @@ import { syncUnsentAnswersToSheets } from '@/lib/sheets';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { sessionId, questionId, questionText, section, answer, audioPath, audioDurationSeconds, audioTranscript } = body;
+    const { sessionId, questionId, questionText, section, answer, audioPath, audioDurationSeconds } = body;
 
     if (!sessionId || !questionId || !questionText || !section) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -26,32 +26,14 @@ export async function POST(req: Request) {
     if (typeof audioDurationSeconds === 'number' && Number.isFinite(audioDurationSeconds)) {
       row.audio_duration_seconds = Math.round(audioDurationSeconds);
     }
-    if (typeof audioTranscript === 'string' && audioTranscript.trim()) {
-      row.audio_transcript = audioTranscript.trim();
-    }
 
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('interview_answers')
       .upsert(row, { onConflict: 'session_id,question_id' })
       .select('id')
       .single();
 
-    // Migration-resilience: if schema_v6 hasn't been run yet, the
-    // audio_transcript column doesn't exist. Drop it from the row and
-    // retry so the answer still saves (transcript is lost, but admin
-    // can still hear the audio).
-    if (error && 'audio_transcript' in row && /audio_transcript/.test(error.message || '')) {
-      console.warn('[answers] audio_transcript column missing — retrying without it. Run supabase/schema_v6.sql.');
-      delete row.audio_transcript;
-      ({ data, error } = await supabase
-        .from('interview_answers')
-        .upsert(row, { onConflict: 'session_id,question_id' })
-        .select('id')
-        .single());
-    }
-
     if (error) throw error;
-    if (!data) throw new Error('Upsert returned no row');
 
     // Fire-and-forget: if there are now >= 5 unsent answers for this session,
     // batch them to Sheets. Never blocks the user's Save & Continue.
