@@ -399,6 +399,7 @@ strong { font-weight: 700; color: var(--text); }
   animation: voice-blink 1s ease-in-out infinite;
 }
 @keyframes voice-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .voice-error {
   margin: 0;
   padding: 10px 14px;
@@ -445,6 +446,9 @@ strong { font-weight: 700; color: var(--text); }
   background: linear-gradient(90deg, var(--danger), var(--warm));
   transition: width 0.2s linear;
 }
+.recorder-preview { display: grid; gap: 10px; padding: 12px; border-radius: var(--r-md); background: var(--accent-soft); border: 1px solid var(--accent-line); }
+.recorder-preview-actions { display: grid; gap: 10px; grid-template-columns: 1fr 1.2fr; }
+@media (max-width: 640px) { .recorder-preview-actions { grid-template-columns: 1fr; } }
 .recorder-saved { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .recorder-audio { flex: 1; min-width: 220px; }
 .answer-item .recorder-audio { width: 100%; margin-top: 8px; }

@@ -9,12 +9,12 @@ type Props = {
   questionId: string;
   audioPath: string | null;
   audioUrl: string | null;
-  onUploaded: (audioPath: string, durationSeconds: number, audioUrl: string) => void;
+  onUploaded: (audioPath: string, durationSeconds: number, audioUrl: string, transcript: string) => void;
   onCleared: () => void;
   disabled?: boolean;
 };
 
-type RecorderState = 'idle' | 'recording' | 'uploading' | 'saved' | 'error';
+type RecorderState = 'idle' | 'recording' | 'preview' | 'uploading' | 'saved' | 'error';
 
 export function VoiceRecorder({
   sessionId,
@@ -29,6 +29,12 @@ export function VoiceRecorder({
   const [state, setState] = useState<RecorderState>(audioPath ? 'saved' : 'idle');
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Local preview state — blob URL is shown to the user BEFORE upload so
+  // they can listen back and decide to save or re-record. We hold the
+  // raw blob too because /api/audio needs it.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewDuration, setPreviewDuration] = useState<number>(0);
+  const previewBlobRef = useRef<Blob | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -40,7 +46,8 @@ export function VoiceRecorder({
     setState(audioPath ? 'saved' : 'idle');
     setElapsed(0);
     setError(null);
-  }, [questionId, audioPath]);
+    discardPreview();
+  }, [questionId, audioPath]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -54,8 +61,10 @@ export function VoiceRecorder({
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
       stopStream();
+      // free any outstanding blob URL on unmount
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function stopStream() {
     if (streamRef.current) {
@@ -64,7 +73,14 @@ export function VoiceRecorder({
     }
   }
 
-  const handleStop = useCallback(async () => {
+  function discardPreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewDuration(0);
+    previewBlobRef.current = null;
+  }
+
+  const handleStop = useCallback(() => {
     const blob = new Blob(chunksRef.current, {
       type: chunksRef.current[0]?.type || 'audio/webm',
     });
@@ -83,6 +99,18 @@ export function VoiceRecorder({
       return;
     }
 
+    // Build a local preview URL so the user can listen before committing.
+    const url = URL.createObjectURL(blob);
+    previewBlobRef.current = blob;
+    setPreviewUrl(url);
+    setPreviewDuration(duration);
+    setState('preview');
+    setElapsed(0);
+  }, []);
+
+  const uploadPreview = useCallback(async () => {
+    const blob = previewBlobRef.current;
+    if (!blob) return;
     setState('uploading');
     setError(null);
     try {
@@ -90,7 +118,7 @@ export function VoiceRecorder({
       form.append('file', blob, `note.${guessExt(blob.type)}`);
       form.append('sessionId', sessionId);
       form.append('questionId', questionId);
-      form.append('durationSeconds', String(duration));
+      form.append('durationSeconds', String(previewDuration));
 
       const res = await fetch('/api/audio', { method: 'POST', body: form });
       const json = await res.json();
@@ -98,17 +126,21 @@ export function VoiceRecorder({
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
       const url = `${supabaseUrl}/storage/v1/object/public/interview-audio/${json.path}`;
-      onUploaded(json.path, duration, url);
+      const transcript = String(json.transcript || '').trim();
+      onUploaded(json.path, previewDuration, url, transcript);
+      discardPreview();
       setState('saved');
       setElapsed(0);
     } catch (err: any) {
       setError(err?.message || 'Upload failed');
-      setState('error');
+      // Stay in preview so the user can retry or re-record without losing audio
+      setState('preview');
     }
-  }, [onUploaded, questionId, sessionId]);
+  }, [onUploaded, previewDuration, questionId, sessionId]);
 
   const start = useCallback(async () => {
     setError(null);
+    discardPreview();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -160,12 +192,20 @@ export function VoiceRecorder({
     }
   }, []);
 
+  const reRecord = useCallback(() => {
+    discardPreview();
+    setState('idle');
+    setElapsed(0);
+    setError(null);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const clear = useCallback(() => {
     setState('idle');
     setElapsed(0);
     setError(null);
+    discardPreview();
     onCleared();
-  }, [onCleared]);
+  }, [onCleared]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (supported === false) {
     return (
@@ -211,8 +251,36 @@ export function VoiceRecorder({
         </div>
       )}
 
+      {state === 'preview' && previewUrl && (
+        <div className="recorder-preview">
+          <div className="muted small" style={{ fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+            Preview · {formatTime(previewDuration)}
+          </div>
+          <audio controls src={previewUrl} preload="metadata" className="recorder-audio" />
+          <div className="recorder-preview-actions">
+            <button
+              type="button"
+              className="btn secondary recorder-btn"
+              onClick={reRecord}
+              disabled={disabled}
+            >
+              Re-record
+            </button>
+            <button
+              type="button"
+              className="btn recorder-btn"
+              onClick={uploadPreview}
+              disabled={disabled}
+            >
+              Save voice note
+            </button>
+          </div>
+          {error ? <p className="voice-error">{error}</p> : null}
+        </div>
+      )}
+
       {state === 'uploading' && (
-        <p className="muted small">Uploading voice note...</p>
+        <p className="muted small">Uploading + transcribing voice note...</p>
       )}
 
       {state === 'saved' && audioUrl && (
@@ -229,7 +297,7 @@ export function VoiceRecorder({
         </div>
       )}
 
-      {error && <p className="voice-error">{error}</p>}
+      {state !== 'preview' && error ? <p className="voice-error">{error}</p> : null}
       {state === 'error' && (
         <button
           type="button"

@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { transcribeAudio, toLatinHinglish } from '@/lib/transcribe';
 
 export const runtime = 'nodejs';
-export const maxDuration = 30;
+// Storage upload ~1-2s + Whisper ~3-8s + transliterate ~1-2s.
+// 60s comfortably covers the 3-min max recording.
+export const maxDuration = 60;
 
 const BUCKET = 'interview-audio';
 const MAX_BYTES = 6 * 1024 * 1024; // 6 MB — 3 min of opus ~ 1.5 MB, generous headroom
@@ -44,10 +47,20 @@ export async function POST(req: Request) {
 
     if (uploadError) throw uploadError;
 
+    // Two-step transcription pipeline:
+    //  1. Whisper: audio -> Devanagari Hindi (+ English words as-is)
+    //  2. GPT-4o-mini: Devanagari -> Latin Hinglish (skipped if no Devanagari)
+    // Both steps are best-effort — failures don't lose the audio upload.
+    const whisper = await transcribeAudio(arrayBuffer, file.type || 'audio/webm');
+    const hinglishTranscript = whisper.text ? await toLatinHinglish(whisper.text) : '';
+
     return NextResponse.json({
       ok: true,
       path,
       durationSeconds: Number.isFinite(durationSeconds) ? Math.round(durationSeconds) : null,
+      transcript: hinglishTranscript,
+      transcriptDevanagari: whisper.text, // kept for reference / debugging
+      transcribeModel: whisper.model,
     });
   } catch (error: any) {
     return NextResponse.json(

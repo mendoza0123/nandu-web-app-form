@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { summarizeInterview } from '@/lib/llm';
 import { syncUnsentAnswersToSheets } from '@/lib/sheets';
+import { isColumnMissingError } from '@/lib/dbTolerant';
 
 export const runtime = 'nodejs';
 
@@ -45,11 +46,20 @@ export async function POST(req: Request) {
 
       after(async () => {
         try {
-          const { data: answers, error: answersError } = await supabase
+          let { data: answers, error: answersError } = await supabase
             .from('interview_answers')
-            .select('question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, created_at')
+            .select('question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, audio_transcript, created_at')
             .eq('session_id', sessionId)
             .order('created_at', { ascending: true });
+          if (answersError && isColumnMissingError(answersError, 'audio_transcript')) {
+            const retry = await supabase
+              .from('interview_answers')
+              .select('question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, created_at')
+              .eq('session_id', sessionId)
+              .order('created_at', { ascending: true });
+            answers = (retry.data || []).map((a: any) => ({ ...a, audio_transcript: null })) as typeof answers;
+            answersError = retry.error;
+          }
           if (answersError) throw answersError;
 
           const summary = await summarizeInterview(session.role, session.respondent_name, answers || []);

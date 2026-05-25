@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { isColumnMissingError } from '@/lib/dbTolerant';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -63,11 +64,20 @@ export async function POST(req: Request) {
     }
 
     const sessionIds = sessions.map((s) => s.id);
-    const { data: answers, error: answersErr } = await supabase
+    let { data: answers, error: answersErr } = await supabase
       .from('interview_answers')
-      .select('session_id, question_id, question_text, section, answer_text, created_at')
+      .select('session_id, question_id, question_text, section, answer_text, audio_transcript, created_at')
       .in('session_id', sessionIds)
       .order('created_at', { ascending: true });
+    if (answersErr && isColumnMissingError(answersErr, 'audio_transcript')) {
+      const retry = await supabase
+        .from('interview_answers')
+        .select('session_id, question_id, question_text, section, answer_text, created_at')
+        .in('session_id', sessionIds)
+        .order('created_at', { ascending: true });
+      answers = (retry.data || []).map((a: any) => ({ ...a, audio_transcript: null }));
+      answersErr = retry.error;
+    }
     if (answersErr) throw answersErr;
 
     const answersBySession = new Map<string, typeof answers>();
@@ -83,7 +93,12 @@ export async function POST(req: Request) {
       if (rows.length === 0) continue;
       const header = `### Session — ${s.respondent_name || '(no name)'} · ${s.role} · ${s.status}`;
       const body = rows
-        .map((r) => `[${r.question_id}] ${r.question_text}\n→ ${r.answer_text}`)
+        .map((r) => {
+          const voiceLine = r.audio_transcript && r.audio_transcript.trim()
+            ? `\n   [Voice note transcript: ${r.audio_transcript.trim()}]`
+            : '';
+          return `[${r.question_id}] ${r.question_text}\n→ ${r.answer_text}${voiceLine}`;
+        })
         .join('\n\n');
       blocks.push(`${header}\n${body}`);
     }
@@ -98,6 +113,7 @@ Rules:
 4. Keep answers concise (3-8 sentences for most questions, bulleted when listing).
 5. Use Hinglish naturally — same flavour as the source data.
 6. Answers literally "(skipped)" mean the respondent skipped that question — not a data point. Don't quote them as evidence. If a skip is relevant to the user's question, say "the respondent skipped this question — follow up needed".
+7. Lines starting with "[Voice note transcript: ...]" are the respondent's spoken elaboration on the same question, transcribed by Whisper and transliterated to Hinglish — treat as equal-weight evidence alongside the typed Answer above. Cite by the same question id.
 
 Data:
 ${corpus}`;

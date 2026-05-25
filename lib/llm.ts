@@ -15,12 +15,17 @@ function getClient() {
   });
 }
 
-export async function summarizeInterview(role: InterviewRole, respondentName: string | null, transcript: Array<{ question_id: string; question_text: string; section: string; answer_text: string }>) {
+export async function summarizeInterview(role: InterviewRole, respondentName: string | null, transcript: Array<{ question_id: string; question_text: string; section: string; answer_text: string; audio_transcript?: string | null }>) {
   const client = getClient();
   const roleLabel = role === 'nandu' ? 'Nandu Bhai / Production' : 'Management / MD';
 
   const transcriptText = transcript
-    .map((item, i) => `${i + 1}. [${item.section}] ${item.question_text}\nAnswer: ${item.answer_text}`)
+    .map((item, i) => {
+      const voiceLine = item.audio_transcript && item.audio_transcript.trim()
+        ? `\n[Voice note transcript: ${item.audio_transcript.trim()}]`
+        : '';
+      return `${i + 1}. [${item.section}] ${item.question_text}\nAnswer: ${item.answer_text}${voiceLine}`;
+    })
     .join('\n\n');
 
   if (!client) {
@@ -38,7 +43,7 @@ export async function summarizeInterview(role: InterviewRole, respondentName: st
       {
         role: 'system',
         content:
-          'You are an internal LD Brain analyst. Convert interview answers into a crisp knowledge summary. Output plain text with headings: Executive Summary, Operational Rules, Risks / Gaps, Reusable SOP Notes, and Next Questions. Be concise but specific.\n\nIf an Answer is "(skipped)" — the respondent intentionally moved past that question. Do NOT treat it as data. Instead, list every skipped question under Risks / Gaps as a follow-up to revisit (cite the question id), and exclude it from Operational Rules / SOP Notes.',
+          'You are an internal LD Brain analyst. Convert interview answers into a crisp knowledge summary. Output plain text with headings: Executive Summary, Operational Rules, Risks / Gaps, Reusable SOP Notes, and Next Questions. Be concise but specific.\n\nIf an Answer is "(skipped)" — the respondent intentionally moved past that question. Do NOT treat it as data. Instead, list every skipped question under Risks / Gaps as a follow-up to revisit (cite the question id), and exclude it from Operational Rules / SOP Notes.\n\nWhen a line "[Voice note transcript: ...]" appears, treat the bracketed text as the respondent\'s spoken elaboration on the same question — equal weight to the typed Answer above it. Merge both into your synthesis; do not quote the brackets in your output.',
       },
       {
         role: 'user',

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { isColumnMissingError } from '@/lib/dbTolerant';
 
 export const runtime = 'nodejs';
 
@@ -25,15 +26,18 @@ export async function GET(
 
     const supabase = getSupabaseAdmin();
 
-    const [{ data: session, error: sessionErr }, { data: answers, error: ansErr }, { data: summary, error: sumErr }] = await Promise.all([
+    const [{ data: session, error: sessionErr }, ansResult, { data: summary, error: sumErr }] = await Promise.all([
       supabase
         .from('interview_sessions')
         .select('id, role, respondent_name, company, status, started_at, completed_at')
         .eq('id', id)
         .maybeSingle(),
+      // Try with audio_transcript first; fall back to the legacy column set
+      // if schema_v6 hasn't been applied yet. Either way the response shape
+      // includes audio_transcript (null when the column is missing).
       supabase
         .from('interview_answers')
-        .select('id, question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, created_at')
+        .select('id, question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, audio_transcript, created_at')
         .eq('session_id', id)
         .order('created_at', { ascending: true }),
       supabase
@@ -42,6 +46,20 @@ export async function GET(
         .eq('session_id', id)
         .maybeSingle(),
     ]);
+
+    let answers = ansResult.data;
+    let ansErr = ansResult.error;
+    if (ansErr && isColumnMissingError(ansErr, 'audio_transcript')) {
+      const retry = await supabase
+        .from('interview_answers')
+        .select('id, question_id, question_text, section, answer_text, audio_path, audio_duration_seconds, created_at')
+        .eq('session_id', id)
+        .order('created_at', { ascending: true });
+      if (!retry.error) {
+        answers = (retry.data || []).map((a: any) => ({ ...a, audio_transcript: null }));
+        ansErr = null;
+      }
+    }
 
     if (sessionErr) throw sessionErr;
     if (ansErr) throw ansErr;
