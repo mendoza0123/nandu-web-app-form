@@ -223,6 +223,17 @@ export default function Page() {
         },
       ]);
 
+      // Defensive: explicit reset after a successful save so the next
+      // question can never inherit this question's audio. The [index, role]
+      // effect already wipes these on index change, but resetting here
+      // closes any state-leak window between the API success and React
+      // committing the index update.
+      setAudioPath(null);
+      setAudioUrl(null);
+      setAudioDurationSeconds(null);
+      setAudioTranscript(null);
+      setNotesValue('');
+
       if (index + 1 >= questions.length) {
         setStatus('Finalising...');
         const done = await fetch('/api/complete', {
@@ -281,6 +292,12 @@ export default function Page() {
           audioDurationSeconds: null,
         },
       ]);
+
+      setAudioPath(null);
+      setAudioUrl(null);
+      setAudioDurationSeconds(null);
+      setAudioTranscript(null);
+      setNotesValue('');
 
       if (index + 1 >= questions.length) {
         // Skipping the final question still triggers completion — but the
