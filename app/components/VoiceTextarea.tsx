@@ -9,9 +9,9 @@ type Props = {
   placeholder?: string;
   lang?: string;
   disabled?: boolean;
-  // Kept for API compatibility with the page (Bolo no longer uploads
-  // audio — user uses the separate Add voice note button if they want
-  // audio captured for admin to listen to).
+  // Kept for API compatibility with the page — Bolo no longer uploads
+  // audio or runs any post-stop conversion. User uses Add voice note for
+  // raw audio capture.
   sessionId?: string;
   questionId?: string;
   onAudioUploaded?: (audioPath: string, durationSeconds: number, audioUrl: string, transcript: string) => void;
@@ -28,19 +28,16 @@ export function VoiceTextarea({
   const [supported, setSupported] = useState<boolean | null>(null);
   const [interim, setInterim] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [transliterating, setTransliterating] = useState(false);
   const recognitionRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
-  const valueRef = useRef(value);
   // Android Chrome ignores continuous=true and emits cumulative finals.
   // Using continuous=false + manual auto-restart on onend gives a
-  // feels-continuous UX while avoiding cumulative-final duplication.
+  // feels-continuous UX while avoiding the cumulative-final duplication bug.
   const shouldKeepListeningRef = useRef(false);
   const emittedFinalsRef = useRef<Set<number>>(new Set());
   const lastFinalTextRef = useRef('');
 
   onChangeRef.current = onChange;
-  valueRef.current = value;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -70,8 +67,8 @@ export function VoiceTextarea({
           if (!emittedFinalsRef.current.has(i)) {
             emittedFinalsRef.current.add(i);
             let chunk = String(result[0].transcript || '').trim();
-            // Defensive: if a new final extends the previous final
-            // (Android Chrome cumulative bug), only emit the new tail.
+            // Defensive: if a new final extends the previous final (Android
+            // Chrome cumulative bug), emit only the new tail.
             const prev = lastFinalTextRef.current;
             if (prev && chunk.startsWith(prev)) {
               chunk = chunk.slice(prev.length).trim();
@@ -162,44 +159,13 @@ export function VoiceTextarea({
     }
   }, []);
 
-  /**
-   * User-initiated stop:
-   *  1. Stop SR (it's still capturing Devanagari live into the textarea)
-   *  2. Take whatever is now in the textarea, transliterate Devanagari → Latin Hinglish
-   *  3. Replace textarea content with Hinglish
-   *
-   * Skips the API call entirely when there's no Devanagari to convert
-   * (the helper does the same check) and falls back to the original text
-   * on any failure — never breaks the user's typed/spoken content.
-   */
-  const stop = useCallback(async () => {
+  const stop = useCallback(() => {
     shouldKeepListeningRef.current = false;
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {}
-    }
-    setListening(false);
-
-    const currentText = valueRef.current || '';
-    if (!/[ऀ-ॿ]/.test(currentText)) return; // no Devanagari, nothing to do
-
-    setTransliterating(true);
+    if (!recognitionRef.current) return;
     try {
-      const res = await fetch('/api/transliterate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: currentText }),
-      });
-      const json = await res.json();
-      if (res.ok && typeof json.text === 'string' && json.text.trim()) {
-        onChangeRef.current(json.text);
-      }
-    } catch (e) {
-      console.warn('[bolo] transliterate failed:', e);
-    } finally {
-      setTransliterating(false);
-    }
+      recognitionRef.current.stop();
+    } catch {}
+    setListening(false);
   }, []);
 
   return (
@@ -209,7 +175,7 @@ export function VoiceTextarea({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={listening ? 'Sun raha hoon... bolte raho' : placeholder}
-        disabled={disabled || transliterating}
+        disabled={disabled}
       />
 
       {interim && (
@@ -225,7 +191,7 @@ export function VoiceTextarea({
             type="button"
             className={`mic-btn ${listening ? 'mic-listening' : ''}`}
             onClick={listening ? stop : start}
-            disabled={disabled || transliterating}
+            disabled={disabled}
             aria-pressed={listening}
             aria-label={listening ? 'Stop recording' : 'Start recording'}
           >
@@ -233,11 +199,7 @@ export function VoiceTextarea({
             <span>{listening ? 'Stop (Bandh karo)' : 'Bolo (Speak)'}</span>
           </button>
           <span className="muted small voice-lang">
-            {transliterating
-              ? 'Hinglish mein convert ho raha hai…'
-              : listening
-                ? 'Live transcription · Stop dabake Hinglish mein convert hoga'
-                : `Live Hindi → Hinglish on Stop · ${lang}`}
+            {listening ? 'Pause kar sakte ho — fir bolo, mic chalu rahega' : `Hindi/Hinglish • ${lang}`}
           </span>
         </div>
       )}
